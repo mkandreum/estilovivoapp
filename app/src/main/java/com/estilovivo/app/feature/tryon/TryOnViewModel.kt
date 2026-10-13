@@ -36,7 +36,13 @@ import kotlin.random.Random
 enum class Busy { Body, Export, Look, Preset, Surprise }
 
 @Immutable
-data class BodyState(val path: String? = null, val aspect: Float = Scene.DEFAULT_ASPECT)
+data class BodyState(val path: String? = null, val aspect: Float = Scene.DEFAULT_ASPECT, val rawAspect: Float = aspect)
+
+enum class PoseStatus { Idle, Detecting, Found, NotFound }
+
+/** [landmarks] en coordenadas normalizadas de la foto. */
+@Immutable
+data class PoseUi(val status: PoseStatus = PoseStatus.Idle, val landmarks: BodyLandmarks? = null)
 
 @Immutable
 data class TryOnUi(
@@ -65,7 +71,10 @@ data class TryOnUi(
     /** Sube con cada guardado correcto (dispara el confeti). */
     val confetti: Int = 0,
     val canSaveToGallery: Boolean = true,
+    val pose: PoseUi = PoseUi(),
+    val cutoutBusy: Set<String> = emptySet(),
 ) {
+    val sceneLandmarks: BodyLandmarks? get() = pose.landmarks?.toScene(body.rawAspect, body.aspect)
     val sceneAspect: Float get() = body.aspect
     val sceneHeight: Float get() = Scene.height(body.aspect)
     val categories: List<TryCategory> get() = TryCategory.entries.filter { c -> garments.any { TryCatalog.categoryOf(it.type) == c } }
@@ -92,6 +101,7 @@ class TryOnViewModel(
     private val random: Random = Random.Default,
     private val newId: () -> String = { UUID.randomUUID().toString() },
     private val clock: () -> Long = System::currentTimeMillis,
+    private val animateFits: Boolean = true,
 ) : ViewModel() {
 
     private val _layers = MutableStateFlow<List<TryLayer>>(emptyList())
@@ -112,6 +122,7 @@ class TryOnViewModel(
     private var lastAddId: String? = null
     private var lastAddAt = 0L
     private val failedToasted = HashSet<String>()
+    private var poseJob: Job? = null
 
     private val sceneH get() = _ui.value.sceneHeight
 
@@ -148,7 +159,7 @@ class TryOnViewModel(
         if (d != null) {
             var body = BodyState()
             val path = d.bodyPath
-            if (path != null && File(path).exists() && assets.loadBody(path)) body = BodyState(path, d.bodyAspect)
+            if (path != null && File(path).exists() && assets.loadBody(path)) body = BodyState(path, d.bodyAspect, rawAspectOf(path, d.bodyAspect))
             val h = Scene.height(body.aspect)
             // Si la foto ya no existe cambia el lienzo: reescala la altura relativa.
             val ratio = h / Scene.height(d.bodyAspect)
@@ -157,6 +168,7 @@ class TryOnViewModel(
             _ui.update { it.copy(body = body, darkBackground = d.darkBackground, mirror = d.mirror, grid = d.grid) }
         }
         _ui.update { it.copy(ready = true) }
+        _ui.value.body.path?.let { startPose(it) }
         maybeAddPending()
     }
 
@@ -166,6 +178,80 @@ class TryOnViewModel(
             is ApiResult.Success -> _ui.update { it.copy(garmentsLoading = false) }
             is ApiResult.Failure -> _ui.update {
                 it.copy(garmentsLoading = false, garmentsError = if (it.garments.isEmpty()) r.error.message else null)
+            }
+        }
+    }
+
+    private fun rawAspectOf(path: String, fallback: Float): Float =
+        assets.body(path)?.let { it.width.toFloat() / it.height }?.takeIf { it.isFinite() && it > 0f } ?: fallback
+
+    private fun startPose(path: String) {
+        poseJob?.cancel()
+        poseJob = viewModelScope.launch {
+            _ui.update { it.copy(pose = PoseUi(PoseStatus.Detecting)) }
+            val lm = assets.detectPose(path)
+            _ui.update { it.copy(pose = if (lm != null) PoseUi(PoseStatus.Found, lm) else PoseUi(PoseStatus.NotFound)) }
+        }
+    }
+
+    /** Ajuste de una prenda al cuerpo detectado (null si no hay pose fiable para esa categoría). */
+    private suspend fun fitFor(cat: TryCategory, name: String, aspect: Float): Fit? {
+        kotlinx.coroutines.withTimeoutOrNull(3000) { poseJob?.join() }
+        val lm = _ui.value.sceneLandmarks ?: return null
+        return PoseFitter.fit(cat, name, aspect, lm, sceneH)
+    }
+
+    private fun animateFit(id: String, f: Fit) {
+        viewModelScope.launch {
+            val start = _layers.value.firstOrNull { it.id == id } ?: return@launch
+            val h = sceneH
+            fun at(k: Float) = start.copy(
+                cx = start.cx + (f.cx - start.cx) * k, cy = start.cy + (f.cy - start.cy) * k,
+                width = start.width + (f.width - start.width) * k, rotation = start.rotation + (f.rotation - start.rotation) * k,
+            )
+            if (animateFits) {
+                var t = 0f
+                while (t < 0.8f) {
+                    delay(16); t += 0.016f
+                    if (gestureBase != null || _layers.value.none { it.id == id }) return@launch
+                    liveUpdate(LayerMath.clampToScene(at(FitSpring.value(t)), h).copy(baseWidth = start.baseWidth))
+                }
+            }
+            if (gestureBase == null && _layers.value.any { it.id == id }) liveUpdate(LayerMath.clampToScene(at(1f), h).copy(baseWidth = start.baseWidth))
+            scheduleDraft()
+        }
+    }
+
+    private fun startAutoCutout(id: String, manual: Boolean = false) {
+        val l = _layers.value.firstOrNull { it.id == id } ?: return
+        viewModelScope.launch {
+            _ui.update { it.copy(cutoutBusy = it.cutoutBusy + id) }
+            val ok = assets.autoCutout(l.url)
+            _ui.update { it.copy(cutoutBusy = it.cutoutBusy - id) }
+            if (ok) {
+                _layers.update { list -> list.map { if (it.id == id && (manual || it.cutout == 0)) it.copy(cutout = -1) else it } }
+                scheduleDraft()
+            } else if (manual) {
+                toast(assets.cutoutNote(l.url, -1) ?: "No se pudo recortar esta prenda. Prueba el recorte básico.", true)
+            }
+        }
+    }
+
+    /** Recorte inteligente a petición (botón de la hoja de recorte). */
+    fun autoCutoutSelected() { selected()?.let { startAutoCutout(it.id, manual = true) } }
+
+    /** Reajusta la prenda seleccionada al cuerpo (o a las proporciones del lienzo) con animación de muelle. */
+    fun fitSelected() {
+        val s = selected() ?: return
+        if (s.locked) { toast("La prenda está bloqueada. Desbloquéala para editarla."); return }
+        viewModelScope.launch {
+            val fit = fitFor(s.category, s.name, s.aspect)
+            val f = fit ?: AutoPlacer.place(s.category, s.aspect, sceneH).let { Fit(it.cx, it.cy, it.width, 0f) }
+            history = history.record(_layers.value)
+            refreshHistoryFlags()
+            animateFit(s.id, f)
+            if (fit == null && _ui.value.body.path != null && _ui.value.pose.status == PoseStatus.NotFound) {
+                toast("No detectamos tu cuerpo en la foto: colocada por proporciones. Prueba con una foto de pie y cuerpo entero.")
             }
         }
     }
@@ -271,14 +357,17 @@ class TryOnViewModel(
             }
             val cat = TryCatalog.categoryOf(g.type)
             val p = AutoPlacer.place(cat, info.aspect, sceneH)
+            val fit = fitFor(cat, g.name, info.aspect)
             val layer = TryLayer(
                 id = newId(), garmentId = g.id, url = g.imageUrl, name = g.name, cx = p.cx, cy = p.cy, width = p.width,
-                aspect = info.aspect, category = cat, baseWidth = p.width,
+                aspect = info.aspect, category = cat, baseWidth = fit?.width ?: p.width,
             )
             var base = _layers.value
             if (base.size >= LayerMath.MAX_LAYERS) { toast("Máximo ${LayerMath.MAX_LAYERS} prendas a la vez.", true); return@launch }
             if (_ui.value.replaceSameCategory && cat in LayerMath.singleSlot) base = base.filterNot { it.category == cat && !it.locked }
             commit(LayerMath.insertByRank(base, layer), select = layer.id)
+            if (fit != null) animateFit(layer.id, fit)
+            startAutoCutout(layer.id)
         }
     }
 
@@ -369,8 +458,9 @@ class TryOnViewModel(
             val built = pick.zip(infos).mapNotNull { (g, info) ->
                 info ?: return@mapNotNull null
                 val cat = TryCatalog.categoryOf(g.type)
-                val p = AutoPlacer.place(cat, info.aspect, h)
-                TryLayer(newId(), g.id, g.imageUrl, g.name, p.cx, p.cy, p.width, info.aspect, category = cat, baseWidth = p.width)
+                val p = fitFor(cat, g.name, info.aspect)?.let { Placement2(it.cx, it.cy, it.width, it.rotation) }
+                    ?: AutoPlacer.place(cat, info.aspect, h).let { Placement2(it.cx, it.cy, it.width, 0f) }
+                LayerMath.clampToScene(TryLayer(newId(), g.id, g.imageUrl, g.name, p.cx, p.cy, p.width, info.aspect, rotation = p.rot, category = cat, baseWidth = p.width), h)
             }
             if (built.isEmpty()) { toast("No se pudieron cargar las prendas. Comprueba tu conexión.", true); return@launch }
             val locked = _layers.value.filter { it.locked }
@@ -378,6 +468,7 @@ class TryOnViewModel(
             for (l in built) result = LayerMath.insertByRank(result, l)
             commit(result.take(LayerMath.MAX_LAYERS), keepSelection = false)
             _ui.update { it.copy(selectedId = null, loadedPresetId = null) }
+            built.forEach { startAutoCutout(it.id) }
             toast("¡Look sorpresa listo! Puedes deshacerlo o ajustarlo.")
         }
     }
@@ -396,7 +487,8 @@ class TryOnViewModel(
             }
             val oldH = sceneH
             val newH = Scene.height(info.aspect)
-            _ui.update { it.copy(busy = null, body = BodyState(info.path, info.aspect)) }
+            _ui.update { it.copy(busy = null, body = BodyState(info.path, info.aspect, rawAspectOf(info.path, info.aspect))) }
+            startPose(info.path)
             if (oldH != newH) {
                 val ratio = newH / oldH
                 _layers.update { l -> l.map { LayerMath.clampToScene(it.copy(cy = it.cy * ratio), newH) } }
@@ -411,7 +503,8 @@ class TryOnViewModel(
     }
 
     fun removeBody() {
-        _ui.update { it.copy(body = BodyState()) }
+        poseJob?.cancel()
+        _ui.update { it.copy(body = BodyState(), pose = PoseUi()) }
         scheduleDraft()
     }
 
@@ -575,6 +668,7 @@ class TryOnViewModel(
             }
             commit(r.layers, keepSelection = false)
             _ui.update { it.copy(selectedId = null, loadedPresetId = p.id) }
+            r.layers.forEach { startAutoCutout(it.id) }
             toast(if (r.missing > 0) "Look cargado. ${r.missing} prenda${if (r.missing == 1) "" else "s"} ya no está${if (r.missing == 1) "" else "n"} en tu armario y se ${if (r.missing == 1) "omitió" else "omitieron"}." else "Look «${p.name}» cargado")
         }
     }
@@ -615,3 +709,6 @@ class TryOnViewModel(
         const val LOOK_SIDE = 1600
     }
 }
+
+
+private data class Placement2(val cx: Float, val cy: Float, val width: Float, val rot: Float)
