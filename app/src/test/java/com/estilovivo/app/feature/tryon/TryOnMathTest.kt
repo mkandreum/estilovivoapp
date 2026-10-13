@@ -300,7 +300,7 @@ class TryOnMathTest {
     @Test fun `ajuste por pose coloca la camiseta entre hombros y cadera`() {
         val lm = pose().toScene(0.75f, 0.75f)
         val f = PoseFitter.fit(TryCategory.Top, "camiseta", 1f, lm, sceneH)!!
-        val sw = 0.2f * 0.75f // ancho de hombros en unidades de escena
+        val sw = 0.2f // ancho de hombros en unidades de escena (la foto llena el ancho)
         assertEquals(sw * 1.3f, f.width, 0.02f)
         assertEquals(0.5f, f.cx, 0.01f)
         assertTrue(f.cy > lm.lShoulder!!.y && f.cy < lm.lHip!!.y + 0.1f)

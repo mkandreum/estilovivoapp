@@ -260,7 +260,7 @@ class TryOnViewModelTest {
         vm.addGarment(wardrobe.state.value.first { it.id == "t1" })
         val withPose = vm.layers.value[0]
         val lm = vm.ui.value.sceneLandmarks!!
-        assertEquals(0.2f * 0.75f * 1.3f, withPose.width, 0.03f)
+        assertEquals(0.2f * 1.3f, withPose.width, 0.03f)
         assertTrue(withPose.cy > lm.lShoulder!!.y)
 
         val vm2 = vm()
