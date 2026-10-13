@@ -491,7 +491,9 @@ private fun SaleCard(
         Box(Modifier.fillMaxWidth().aspectRatio(1f)) {
             EvImage(
                 garment.imageUrl, garment.name,
-                Modifier.matchParentSize().let { if (pending || !shared) it else it.sharedElementIfAvailable(SharedKey(garment.id)) }.clip(EvShapes.cardSmall),
+                Modifier.matchParentSize().let { if (pending || !shared) it else it.sharedElementIfAvailable(SharedKey(garment.id)) }
+                    .clip(EvShapes.cardSmall).background(c.surfaceAlt),
+                contentScale = androidx.compose.ui.layout.ContentScale.Fit,
             )
             Text(
                 formatPrice(garment.price), style = EvType.caption, color = c.onInk,

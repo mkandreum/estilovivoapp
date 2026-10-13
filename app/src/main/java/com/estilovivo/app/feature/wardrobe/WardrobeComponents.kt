@@ -436,7 +436,9 @@ fun GarmentCard(
             EvImage(
                 model = garment.imageUrl,
                 contentDescription = garment.name,
-                modifier = Modifier.matchParentSize().let { if (pending || !shared) it else it.sharedElementIfAvailable(SharedKey(garment.id)) }.clip(EvShapes.cardSmall),
+                modifier = Modifier.matchParentSize().let { if (pending || !shared) it else it.sharedElementIfAvailable(SharedKey(garment.id)) }
+                    .clip(EvShapes.cardSmall).background(c.surfaceAlt),
+                contentScale = androidx.compose.ui.layout.ContentScale.Fit,
             )
             if (garment.forSale) {
                 Text(
