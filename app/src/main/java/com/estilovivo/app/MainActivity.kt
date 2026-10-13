@@ -1,6 +1,8 @@
 package com.estilovivo.app
 
+import android.content.Intent
 import android.os.Bundle
+import com.estilovivo.app.feature.notifications.NotificationLinks
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -31,10 +33,18 @@ class MainActivity : ComponentActivity() {
     private val prefs: AppPrefs by inject()
     private val deepLinks: DeepLinkHub by inject()
 
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        NotificationLinks.offer(intent)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        // Si se abrió desde una notificación del sistema, EvApp navega al destino cuando haya sesión
+        if (savedInstanceState == null) NotificationLinks.offer(intent)
 
         // Arranque en frío con enlace. Tras muerte del proceso el intent original se reentrega: no se repite
         if (savedInstanceState == null) handleLink(intent)

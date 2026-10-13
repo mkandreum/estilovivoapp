@@ -14,6 +14,23 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavDestination.Companion.hasRoute
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.toRoute
+import com.estilovivo.app.core.data.repo.NotificationRepository
+import com.estilovivo.app.core.data.session.SessionManager
+import com.estilovivo.app.core.data.socket.SocketManager
+import com.estilovivo.app.feature.notifications.InAppNotificationBannerHost
+import com.estilovivo.app.feature.notifications.NotificationLinks
+import com.estilovivo.app.feature.notifications.open
+import kotlinx.coroutines.delay
+import org.koin.compose.koinInject
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -80,10 +97,52 @@ fun EvApp(
             }
         }
 
-        CompositionLocalProvider(LocalEvToast provides toast, LocalNavigator provides navigator) {
+        // ── Conectividad: banner "Sin conexión" y reintento automático al volver la red ──
+        val context = LocalContext.current
+        val online by remember(context) { context.connectivityFlow() }.collectAsStateWithLifecycle(true)
+        var restoredTick by remember { mutableStateOf(0) }
+        var bannerVisible by remember { mutableStateOf(false) }
+        val session: SessionManager = koinInject()
+        val socket: SocketManager = koinInject()
+        val notifications: NotificationRepository = koinInject()
+        var wasOffline by remember { mutableStateOf(false) }
+        LaunchedEffect(online) {
+            if (!online) {
+                wasOffline = true
+                bannerVisible = true
+            } else if (wasOffline) {
+                wasOffline = false
+                restoredTick++
+                if (session.hasSession) {
+                    socket.connect()
+                    notifications.refresh()
+                }
+                delay(2000)
+                bannerVisible = false
+            }
+        }
+        val bannerPad by animateDpAsState(if (bannerVisible) OfflineBannerHeight else 0.dp, tween(300), label = "bannerPad")
+
+        // ── Abrir una notificación del sistema (deep link) cuando la app ya está lista y hay sesión ──
+        val pendingLink by NotificationLinks.pending.collectAsStateWithLifecycle()
+        val backEntry by nav.currentBackStackEntryAsState()
+        LaunchedEffect(pendingLink, backEntry) {
+            val dest = pendingLink ?: return@LaunchedEffect
+            val d = backEntry?.destination ?: return@LaunchedEffect
+            val unauth = d.hasRoute<Welcome>() || d.hasRoute<Auth>() || d.hasRoute<Onboarding>()
+            if (!session.hasSession) { NotificationLinks.consume(); return@LaunchedEffect }
+            if (unauth) return@LaunchedEffect
+            NotificationLinks.consume()
+            navigator.open(dest) { toast.show("No pudimos abrir esa pantalla") }
+        }
+
+        CompositionLocalProvider(
+            LocalEvToast provides toast, LocalNavigator provides navigator, LocalNetworkRestoredTick provides restoredTick,
+        ) {
             Box(Modifier.fillMaxSize().background(EvTheme.colors.bg)) {
                 // Enlaces entrantes (verificación, restablecer contraseña, perfiles)
                 com.estilovivo.app.feature.auth.DeepLinkEffect(nav)
+              Box(Modifier.fillMaxSize().padding(top = bannerPad)) {
                 SharedTransitionLayout {
                     CompositionLocalProvider(LocalSharedTransitionScope provides this) {
                         NavHost(
@@ -119,6 +178,14 @@ fun EvApp(
                         }
                     }
                 }
+              }
+                OfflineBannerOverlay(visible = bannerVisible, offline = !online, bannerPad = bannerPad)
+                InAppNotificationBannerHost(suppress = { n ->
+                    val e = nav.currentBackStackEntry
+                    val d = e?.destination
+                    d == null || d.hasRoute<Notifications>() ||
+                        (d.hasRoute<Chat>() && runCatching { e.toRoute<Chat>().conversationId }.getOrNull() == n.relatedId)
+                })
                 EvToastHost(toast)
             }
         }
@@ -132,4 +199,10 @@ fun EvApp(
 @Composable
 fun androidx.compose.animation.AnimatedContentScope.SharedScope(content: @Composable () -> Unit) {
     CompositionLocalProvider(LocalAnimatedVisibilityScope provides this) { content() }
+}
+
+@Composable
+private fun OfflineBannerOverlay(visible: Boolean, offline: Boolean, bannerPad: androidx.compose.ui.unit.Dp) {
+    // Se dibuja mientras el contenido está desplazado; al terminar de subir (bannerPad = 0) desaparece
+    if (visible || bannerPad > 0.dp) OfflineBanner(offline = offline)
 }
