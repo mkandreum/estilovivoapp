@@ -50,20 +50,26 @@ object EvMotion {
 // ─────────────────────────────────────────────────────────────────────────────
 // Háptica
 // ─────────────────────────────────────────────────────────────────────────────
-class EvHaptics(private val h: HapticFeedback) {
-    fun tick() = h.performHapticFeedback(HapticFeedbackType.SegmentTick)
-    fun click() = h.performHapticFeedback(HapticFeedbackType.ContextClick)
-    fun confirm() = h.performHapticFeedback(HapticFeedbackType.Confirm)
-    fun reject() = h.performHapticFeedback(HapticFeedbackType.Reject)
-    fun toggle(on: Boolean) = h.performHapticFeedback(if (on) HapticFeedbackType.ToggleOn else HapticFeedbackType.ToggleOff)
-    fun heavy() = h.performHapticFeedback(HapticFeedbackType.LongPress)
-    fun threshold() = h.performHapticFeedback(HapticFeedbackType.GestureThresholdActivate)
+/** Vibración táctil. Respeta el ajuste del usuario ([LocalHapticsEnabled], alimentado por `AppPrefs.haptics`). */
+class EvHaptics(private val h: HapticFeedback, private val enabled: Boolean = true) {
+    private fun perform(type: HapticFeedbackType) { if (enabled) h.performHapticFeedback(type) }
+    fun tick() = perform(HapticFeedbackType.SegmentTick)
+    fun click() = perform(HapticFeedbackType.ContextClick)
+    fun confirm() = perform(HapticFeedbackType.Confirm)
+    fun reject() = perform(HapticFeedbackType.Reject)
+    fun toggle(on: Boolean) = perform(if (on) HapticFeedbackType.ToggleOn else HapticFeedbackType.ToggleOff)
+    fun heavy() = perform(HapticFeedbackType.LongPress)
+    fun threshold() = perform(HapticFeedbackType.GestureThresholdActivate)
 }
+
+/** `false` desactiva toda la háptica de la app (ajuste de accesibilidad del perfil). Lo provee [EvTheme]. */
+val LocalHapticsEnabled = staticCompositionLocalOf { true }
 
 @Composable
 fun rememberEvHaptics(): EvHaptics {
     val h = LocalHapticFeedback.current
-    return remember(h) { EvHaptics(h) }
+    val enabled = LocalHapticsEnabled.current
+    return remember(h, enabled) { EvHaptics(h, enabled) }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
