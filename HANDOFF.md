@@ -82,6 +82,12 @@ La web falla en: ponerse ropa sobre la foto con los dedos, y el recorte de la ro
 ### 3.2d Funciones de la web NO cubiertas aún (decidir)
 Idioma/dialecto (`LanguageContext`/`translations.ts`, la app está sólo en español), presets de tema de la web (ver 3.2b), `musicSync`, ubicación en el quiz del onboarding, push FCM, Play Billing, ruta `/look/{id}` (deep link sin destino), exportar datos (la web lo promete en Privacy y no existe), alertas de precio (inexistentes en la web).
 
+### 3.2e Requisitos de Google Play pendientes (ver PLAY_STORE.md)
+- **UGC: denunciar y bloquear** (feed, comentarios, historias, chat, perfiles): Play lo exige y la app NO lo tiene; tampoco el servidor (`web/server`: faltan modelos `Report`/`Block`, endpoints `POST /reports`, `POST/DELETE /blocks`, y filtrar contenido/mensajes/seguimiento de usuarios bloqueados). Implementar servidor + app (menú "⋯" → Denunciar / Bloquear, pantalla "Usuarios bloqueados" en Ajustes).
+- **Página web de eliminación de cuenta** (URL pública) en `web/pages/Privacy.tsx` o nueva ruta.
+- **Cuenta de prueba** para los revisores de Play.
+- Docs para entregar: `PLAY_STORE.md` (ficha completa) y `COMPILAR_FIRMADO.md` (guía de Android Studio para compilar firmado). Zip de fuentes sin `build/`, `.gradle/`, `local.properties`, `.git`, claves.
+
 ### 3.3 Cierre
 1. Compilar todo, `:app:testDebugUnitTest` verde, `:app:lintDebug` sin errores graves.
 2. Probar en emulador cada pantalla y flujo (ver §5), en claro y oscuro, con fuente grande y sin red. Arreglar visual/funcional.
