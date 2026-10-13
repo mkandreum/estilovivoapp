@@ -1,5 +1,6 @@
 package com.estilovivo.app.feature.home
 
+import com.estilovivo.app.core.design.asPanel
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Animatable
@@ -95,7 +96,7 @@ fun LevelCard(section: Section<LevelUi>, onRetry: () -> Unit, modifier: Modifier
 
 @Composable
 private fun LevelCardContent(level: LevelUi) {
-    val c = EvTheme.colors
+    val c = EvTheme.colors.asPanel()
     var target by remember { mutableFloatStateOf(0f) }
     LaunchedEffect(level.progress.fraction) { target = level.progress.fraction }
     val fraction by animateFloatAsState(target, EvMotion.smooth(), label = "xpBar")
@@ -276,7 +277,7 @@ private fun WeatherContent(
 
 @Composable
 fun TodayLookCard(look: Look, note: String?, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    val c = EvTheme.colors
+    val c = EvTheme.colors.asPanel()
     val garments = look.garments.filter { it.imageUrl.isNotBlank() }
     val count = look.garments.size
     Row(

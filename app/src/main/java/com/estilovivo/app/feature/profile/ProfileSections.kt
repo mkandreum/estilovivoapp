@@ -1,5 +1,6 @@
 package com.estilovivo.app.feature.profile
 
+import com.estilovivo.app.core.design.asPanel
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -202,9 +203,10 @@ private fun ProgressContent(ui: ProgressUi) {
     LaunchedEffect(lv.fraction) { bar.animateTo(lv.fraction, tween(900, easing = EvMotion.emphasized)) }
     Column(verticalArrangement = Arrangement.spacedBy(EvSpace.lg)) {
         Column(
-            Modifier.fillMaxWidth().staggeredEntrance(0).clip(EvShapes.hero).background(c.ink).padding(22.dp),
+            Modifier.fillMaxWidth().staggeredEntrance(0).clip(EvShapes.hero).background(c.asPanel().ink).padding(22.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
+            val c = c.asPanel()
             Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
                 Column {
                     Text("NIVEL", style = EvType.caption, color = c.onInk.copy(alpha = 0.7f))

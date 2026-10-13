@@ -1,5 +1,6 @@
 package com.estilovivo.app.feature.suitcase
 
+import com.estilovivo.app.core.design.asPanel
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.expandVertically
@@ -312,7 +313,7 @@ private fun TripBody(
 
 @Composable
 private fun TripHero(trip: Trip, today: LocalDate, phase: TripPhase?, modifier: Modifier = Modifier) {
-    val c = EvTheme.colors
+    val c = EvTheme.colors.asPanel()
     val fraction = rememberAnimatedFraction(Checklist.fraction(trip.items), delayMs = 250)
     val percent = (fraction * 100).roundToInt()
     val length = TripDates.length(trip.dateStart, trip.dateEnd)

@@ -1,5 +1,6 @@
 package com.estilovivo.app.feature.wardrobe
 
+import com.estilovivo.app.core.design.asPanel
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateFloatAsState
@@ -425,9 +426,10 @@ fun SalesView(
             fullSpan("summary") {
                 val animated by animateFloatAsState(state.salesTotal.toFloat(), tween(900), label = "salesTotal")
                 Column(
-                    Modifier.fillMaxWidth().staggeredEntrance(0).clip(EvShapes.hero).background(c.ink).padding(22.dp),
+                    Modifier.fillMaxWidth().staggeredEntrance(0).clip(EvShapes.hero).background(c.asPanel().ink).padding(22.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
+                    val c = c.asPanel()
                     Text("Valor en escaparate", style = EvType.caption, color = c.onInk.copy(alpha = 0.7f))
                     Text("${animated.roundToInt()} €", style = EvType.bigNumber.copy(fontSize = 44.sp), color = c.onInk)
                     Text(

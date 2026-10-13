@@ -89,3 +89,13 @@ val WelcomeSlate = Color(0xFF7D848F)
 val WelcomeSlateDeep = Color(0xFF14171D)
 
 val LocalEvColors = staticCompositionLocalOf { LightEvColors }
+
+/** Fondo de los paneles grandes (nivel, "look de hoy", cabeceras). En oscuro `ink` es casi blanco: aquí queda un panel oscuro. */
+val PanelDark = Color(0xFF25252E)
+
+/**
+ * Colores para pintar DENTRO de un panel oscuro: en claro no cambia nada (ink negro / onInk blanco);
+ * en oscuro `ink` pasa a panel oscuro y `onInk` a texto claro, de modo que `background(c.ink)` + `c.onInk` siguen siendo coherentes.
+ */
+fun EvColors.asPanel(): EvColors =
+    if (!isDark) this else copy(ink = PanelDark, onInk = Color(0xFFF5F5F8))

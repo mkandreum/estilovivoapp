@@ -1,5 +1,6 @@
 package com.estilovivo.app.feature.profile
 
+import com.estilovivo.app.core.design.asPanel
 import android.content.Intent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
@@ -73,9 +74,10 @@ fun PremiumScreen() {
     val toast = LocalEvToast.current
     ProfileScreenFrame("Estilo Vivo\n*Premium*", onBack = { nav.back() }) {
         Box(
-            Modifier.fillMaxWidth().staggeredEntrance(0).clip(EvShapes.hero).background(c.ink).padding(24.dp),
+            Modifier.fillMaxWidth().staggeredEntrance(0).clip(EvShapes.hero).background(c.asPanel().ink).padding(24.dp),
             contentAlignment = Alignment.CenterStart,
         ) {
+            val c = c.asPanel()
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Icon(Icons.Rounded.WorkspacePremium, null, tint = c.onInk, modifier = Modifier.size(40.dp).floatingBob(6f))
                 Text("Tu plan: gratuito", style = EvType.title, color = c.onInk)

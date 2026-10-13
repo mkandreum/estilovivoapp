@@ -1,5 +1,6 @@
 package com.estilovivo.app.feature.social.feed
 
+import com.estilovivo.app.core.design.asPanel
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -90,7 +91,7 @@ fun ChallengeHistoryScreen(modifier: Modifier = Modifier) {
 
 @Composable
 private fun XpTotalCard(totalXp: Int, completed: Int) {
-    val c = EvTheme.colors
+    val c = EvTheme.colors.asPanel()
     Row(
         Modifier.fillMaxWidth().clip(EvShapes.card).background(c.ink).padding(20.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp),
