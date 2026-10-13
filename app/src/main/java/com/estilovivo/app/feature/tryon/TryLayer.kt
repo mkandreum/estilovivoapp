@@ -414,3 +414,36 @@ object PresetRules {
     /** Tamaño aproximado en bytes de un data URL base64 (para comprobar el límite de miniatura). */
     fun dataUrlBytes(dataUrl: String): Int = (dataUrl.substringAfter(',', "").length * 3L / 4L).toInt()
 }
+
+
+/** Zoom/desplazamiento de la ESCENA (pura, testeable): siempre finito y acotado. */
+data class ViewState(val zoom: Float = 1f, val panX: Float = 0f, val panY: Float = 0f)
+
+object ViewMath {
+    const val MIN_ZOOM = 1f
+    const val MAX_ZOOM = 5f
+
+    /**
+     * @param ox,oy centroide de los dedos relativo al centro del contenedor (px).
+     * @param s0 escala base (px por unidad de escena cuando zoom = 1).
+     */
+    fun apply(
+        v: ViewState, zoomChange: Float, dx: Float, dy: Float, ox: Float, oy: Float,
+        s0: Float, sceneH: Float, cw: Float, ch: Float,
+    ): ViewState {
+        if (listOf(dx, dy, ox, oy, s0, sceneH, cw, ch).any { it.isNaN() || it.isInfinite() } || s0 <= 0f) return v
+        val zc = if (zoomChange.isNaN() || zoomChange.isInfinite() || zoomChange <= 0f) 1f else zoomChange
+        val z = (v.zoom * zc).coerceIn(MIN_ZOOM, MAX_ZOOM)
+        val applied = z / v.zoom
+        var px = ox - (ox - v.panX) * applied + dx
+        var py = oy - (oy - v.panY) * applied + dy
+        val s = s0 * z
+        val sw = s
+        val sh = s * sceneH
+        val lx = kotlin.math.abs(sw - cw) / 2f + minOf(sw, cw) * 0.3f
+        val ly = kotlin.math.abs(sh - ch) / 2f + minOf(sh, ch) * 0.3f
+        px = px.coerceIn(-lx, lx)
+        py = py.coerceIn(-ly, ly)
+        return ViewState(z, px, py)
+    }
+}

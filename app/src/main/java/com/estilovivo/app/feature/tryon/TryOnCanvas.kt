@@ -133,7 +133,9 @@ internal fun TryOnCanvas(
     onScale: (Float) -> Unit,
     onRotate: (Float) -> Unit,
     onNudge: (Float, Float) -> Unit,
+    onDoubleTapLayer: () -> Unit,
     modifier: Modifier = Modifier,
+    poseOverlay: BodyLandmarks? = null,
     showSilhouetteHint: Boolean = false,
 ) {
     val sceneH = Scene.height(sceneAspect)
@@ -183,6 +185,7 @@ internal fun TryOnCanvas(
     }
 
     var lastTapTime by remember { mutableFloatStateOf(0f) }
+    var lastTapId by remember { mutableStateOf<String?>(null) }
 
     val a11yLabel = if (selectedId != null) "Lienzo del probador. Prenda seleccionada." else "Lienzo del probador."
 
@@ -244,7 +247,8 @@ internal fun TryOnCanvas(
                         val startScene = g0.toScene(down.position)
                         if (mode == DragMode.Scene) {
                             val slop = with(density) { 8.dp.toPx() } / g0.s
-                            val hit = LayerMath.hitTest(all, startScene.x, startScene.y, slop)
+                            val hit = LayerMath.hitTest(all, startScene.x, startScene.y, slop) { assets.alphaMask(it.url, it.cutout) }
+                                ?: sel?.takeIf { LayerMath.contains(it, startScene.x, startScene.y, slop) }
                             if (hit != null) {
                                 target = hit
                                 mode = if (hit.locked) DragMode.Scene else DragMode.Layer
@@ -298,14 +302,12 @@ internal fun TryOnCanvas(
                                     }
                                     else -> {
                                         // Escena: zoom alrededor de los dedos + desplazamiento.
-                                        val z = (viewport.zoom * zoom).coerceIn(1f, 5f)
-                                        val applied = z / viewport.zoom
-                                        val ox = centroid.x - g.cx
-                                        val oy = centroid.y - g.cy
-                                        viewport.panX = ox - (ox - viewport.panX) * applied + pan.x
-                                        viewport.panY = oy - (oy - viewport.panY) * applied + pan.y
-                                        viewport.zoom = z
-                                        clampPan()
+                                        val nv = ViewMath.apply(
+                                            ViewState(viewport.zoom, viewport.panX, viewport.panY), zoom, pan.x, pan.y,
+                                            centroid.x - g.cx, centroid.y - g.cy, baseScale(), latestSceneH.value,
+                                            size.width.toFloat(), size.height.toFloat(),
+                                        )
+                                        viewport.zoom = nv.zoom; viewport.panX = nv.panX; viewport.panY = nv.panY
                                     }
                                 }
                                 event.changes.forEach { if (it.positionChanged()) it.consume() }
@@ -319,11 +321,16 @@ internal fun TryOnCanvas(
                         if (!pastSlop) {
                             when (mode) {
                                 DragMode.Delete -> sel?.let { onDelete(it.id); haptics.heavy() }
-                                DragMode.Scene -> {
+                                DragMode.Scene, DragMode.Layer -> {
                                     if (target == null) onSelect(null)
                                     val now = System.nanoTime() / 1_000_000f
-                                    if (now - lastTapTime < 320f && target == null) scope.launch { viewport.reset() }
-                                    lastTapTime = now
+                                    if (now - lastTapTime < 320f && target?.id == lastTapId) {
+                                        if (target == null) scope.launch { viewport.reset() } else { onDoubleTapLayer(); haptics.confirm() }
+                                        lastTapTime = 0f
+                                    } else {
+                                        lastTapTime = now
+                                        lastTapId = target?.id
+                                    }
                                 }
                                 else -> Unit
                             }
@@ -394,6 +401,7 @@ internal fun TryOnCanvas(
                 drawPath(a, Color.Black, style = st); drawPath(b, Color.Black, style = st)
                 return@Canvas
             }
+            poseOverlay?.let { drawPose(it, g, pop.value) }
             val sel = layers.value.firstOrNull { it.id == selectedId } ?: return@Canvas
             drawSelection(sel, g, pop.value, pulseV)
         }
@@ -441,4 +449,24 @@ private fun DrawScope.drawSelection(l: TryLayer, g: Geo, pop: Float, pulse: Floa
         moveTo(scl.x - d, scl.y - d); lineTo(scl.x - d * 0.3f, scl.y - d)
     }
     drawPath(arrow, Color.Black, style = Stroke(1.8.dp.toPx(), cap = StrokeCap.Round))
+}
+
+
+private fun DrawScope.drawPose(lm: BodyLandmarks, g: Geo, pop: Float) {
+    fun s(p: Pt?): Offset? = p?.takeIf { it.ok }?.let { g.toScreen(it.x, it.y) }
+    val bones = listOf(
+        lm.lShoulder to lm.rShoulder, lm.lShoulder to lm.lHip, lm.rShoulder to lm.rHip, lm.lHip to lm.rHip,
+        lm.lHip to lm.lKnee, lm.rHip to lm.rKnee, lm.lKnee to lm.lAnkle, lm.rKnee to lm.rAnkle,
+    )
+    val line = Color(0xFF4ADE80)
+    for ((a, b) in bones) {
+        val pa = s(a) ?: continue
+        val pb = s(b) ?: continue
+        drawLine(line.copy(alpha = 0.85f), pa, pb, 2.5.dp.toPx(), StrokeCap.Round)
+    }
+    lm.all().forEach { p ->
+        val o = s(p) ?: return@forEach
+        drawCircle(Color.Black.copy(alpha = 0.4f), 6.dp.toPx() * pop, o)
+        drawCircle(line, 4.5.dp.toPx() * pop, o)
+    }
 }
