@@ -10,10 +10,12 @@ import com.estilovivo.app.feature.social.socialModule
 import com.estilovivo.app.feature.suitcase.suitcaseModule
 import com.estilovivo.app.feature.tryon.tryonModule
 import com.estilovivo.app.feature.wardrobe.wardrobeModule
+import com.estilovivo.app.feature.social.feed.feedModule
 
 /** Todos los módulos Koin de la app. Cada módulo vive en su paquete (sin tocar este fichero). */
 val appModules = listOf(
     dataModule,
     authModule, homeModule, wardrobeModule, plannerModule, suitcaseModule,
     tryonModule, socialModule, profileModule, notificationsModule,
+    feedModule,
 )
