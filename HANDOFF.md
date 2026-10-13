@@ -25,11 +25,11 @@ Exigencia del cliente: *"hay funcionalidades en la web que no van bien; en la ap
 | core/util `CycleStore` (ciclo, cifrado) | ✅ en master | master |
 | feature/social/shop + chat (Tienda, Favoritos, Detalle, Chat tiempo real) | ✅ en master (90 tests) | master |
 | feature/wardrobe (armario, looks, ventas, lavadora) | ✅ en master (46 tests) | master |
-| feature/social/feed (feed, historias, retos, perfil ajeno, tendencias) | ⏳ agente trabajando; **al retomar mira si `feat-social-feed` tiene commit y fusiónalo** | feat-social-feed |
+| feature/social/feed (feed, historias, retos, perfil ajeno, tendencias) | ✅ en master (74 tests) | master |
 | feature/home | ⏳ ídem | feat-home |
 | feature/planner | ⏳ ídem | feat-planner |
 | feature/suitcase (+wishlist) | ⏳ ídem | feat-suitcase |
-| feature/profile (+ajustes, premium, privacidad) | ❌ pendiente (hay placeholder) | — |
+| feature/profile (+ajustes, premium, privacidad) | ⏳ agente trabajando (comprobar `feat-profile`) | feat-profile |
 | feature/auth (login/registro/onboarding/deep links) | ❌ pendiente (placeholder; `Welcome` ya hecha) | — |
 | feature/tryon (probador virtual) | ❌ pendiente (placeholder) | — |
 | feature/notifications (campana, pantalla) + pulido transversal | ❌ pendiente (placeholder) | — |
