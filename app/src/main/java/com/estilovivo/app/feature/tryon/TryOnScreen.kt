@@ -213,7 +213,7 @@ private fun TryOnContent(vm: TryOnViewModel, modifier: Modifier) {
                     }
                     ResetZoomButton(viewport) { scope.launch { viewport.reset() } }
                 }
-                AnimatedVisibility(compare, Modifier.align(Alignment.TopCenter).padding(top = 10.dp), enter = fadeIn() + scaleIn(), exit = fadeOut() + scaleOut()) {
+                androidx.compose.animation.AnimatedVisibility(compare, Modifier.align(Alignment.TopCenter).padding(top = 10.dp), enter = fadeIn() + scaleIn(), exit = fadeOut() + scaleOut()) {
                     Row(Modifier.clip(CircleShape).background(Color.Black.copy(alpha = 0.55f)).padding(horizontal = 14.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         Text("Antes", style = EvType.caption, color = Color.White)
                         Text("Desliza para comparar", style = EvType.caption, color = Color.White.copy(alpha = 0.7f))

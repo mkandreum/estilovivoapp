@@ -3,6 +3,7 @@ package com.estilovivo.app.feature.tryon
 import android.graphics.BitmapFactory
 import android.util.Base64
 import androidx.compose.foundation.Canvas
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
@@ -434,7 +435,7 @@ internal fun CutoutSheet(
     onSmart: () -> Unit, onBasic: (tolerance: Int, commit: Boolean) -> Unit, onRestore: () -> Unit, onDismiss: () -> Unit,
 ) {
     val c = EvTheme.colors
-    val status by assets.cutoutStatus.collectAsStateWithLifecycleCompat()
+    val status by assets.cutoutStatus.collectAsStateWithLifecycle()
     var split by remember { mutableFloatStateOf(0.5f) }
     var tolerance by remember(layer.id) { mutableIntStateOf(if (layer.cutout > 0) layer.cutout else Cutout.DEFAULT_TOLERANCE) }
     val note = assets.cutoutNote(layer.url, layer.cutout).takeIf { layer.cutout != 0 }
@@ -502,7 +503,3 @@ internal fun CutoutSheet(
         }
     }
 }
-
-@Composable
-private fun <T> kotlinx.coroutines.flow.StateFlow<T>.collectAsStateWithLifecycleCompat(): State<T> =
-    androidx.lifecycle.compose.collectAsStateWithLifecycle(this)
