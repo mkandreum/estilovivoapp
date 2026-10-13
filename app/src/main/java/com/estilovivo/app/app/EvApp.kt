@@ -82,6 +82,8 @@ fun EvApp(
 
         CompositionLocalProvider(LocalEvToast provides toast, LocalNavigator provides navigator) {
             Box(Modifier.fillMaxSize().background(EvTheme.colors.bg)) {
+                // Enlaces entrantes (verificación, restablecer contraseña, perfiles)
+                com.estilovivo.app.feature.auth.DeepLinkEffect(nav)
                 SharedTransitionLayout {
                     CompositionLocalProvider(LocalSharedTransitionScope provides this) {
                         NavHost(

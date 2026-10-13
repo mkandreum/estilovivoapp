@@ -14,7 +14,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.estilovivo.app.app.EvApp
 import com.estilovivo.app.app.Main
 import com.estilovivo.app.app.Welcome
+import android.content.Intent
 import com.estilovivo.app.core.data.session.AppPrefs
+import com.estilovivo.app.feature.auth.DeepLinkHub
 import com.estilovivo.app.core.data.session.SessionEvent
 import com.estilovivo.app.core.data.session.SessionManager
 import com.estilovivo.app.core.data.session.ThemeMode
@@ -27,11 +29,15 @@ import org.koin.android.ext.android.inject
 class MainActivity : ComponentActivity() {
     private val session: SessionManager by inject()
     private val prefs: AppPrefs by inject()
+    private val deepLinks: DeepLinkHub by inject()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        // Arranque en frío con enlace. Tras muerte del proceso el intent original se reentrega: no se repite
+        if (savedInstanceState == null) handleLink(intent)
 
         // Destino inicial: si hay tokens guardados (access o refresh) se entra directo; el refresh es transparente.
         val start: Any = if (session.hasSession) Main else Welcome
@@ -56,5 +62,18 @@ class MainActivity : ComponentActivity() {
                 EvApp(startDestination = start, darkTheme = dark, sessionExpired = expired)
             }
         }
+    }
+
+    /** Arranque en caliente (la actividad ya existe): llega un enlace nuevo. */
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleLink(intent)
+    }
+
+    /** Sólo `ACTION_VIEW`; el host/esquema y el formato del token los valida `DeepLinkParser`. */
+    private fun handleLink(intent: Intent?) {
+        if (intent?.action != Intent.ACTION_VIEW) return
+        deepLinks.submit(intent.dataString)
     }
 }
