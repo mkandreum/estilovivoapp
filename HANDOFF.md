@@ -88,6 +88,11 @@ Idioma/dialecto (`LanguageContext`/`translations.ts`, la app está sólo en espa
 - **Cuenta de prueba** para los revisores de Play.
 - Docs para entregar: `PLAY_STORE.md` (ficha completa) y `COMPILAR_FIRMADO.md` (guía de Android Studio para compilar firmado). Zip de fuentes sin `build/`, `.gradle/`, `local.properties`, `.git`, claves.
 
+### 3.2f Estado al subir a GitHub (13/10/2026) — LEER
+- **Subido a `main`**: app nativa (`mkandreum/estilovivoapp`, el contenedor Capacitor antiguo quedó en la rama `legacy-capacitor`) y web (`mkandreum/estilovivo`, incluye el arreglo del servidor para prendas ya recortadas con transparencia).
+- **Parado por el cliente, SIN HACER**: (a) auditoría de seguridad de la app nativa (checklist MASVS: almacenamiento, FileProvider `files-path path="."` demasiado amplio, logout que borre cachés/borradores/recortes, deep links, R8, dependencias, `CycleStore` con fallback en claro); (b) auditoría de seguridad del backend+web, segunda pasada (refresh tokens en claro en BD, JWT de 7 días → 15–30 min, `authLimiter` compartido de 5/15 min, CSP/cabeceras en la web, importmap esm.sh en `index.html`, validación zod que falta en tryon-presets/stories/challenges, `npm audit`, Dockerfile/`prisma db push` en producción); (c) reparación de funciones de ropa de la WEB (rama `fix-garments`, WIP SIN TERMINAR: `components/TryOnStage.tsx`, `src/utils/alphaMap.ts`, `src/utils/tryOnLayers.ts`, cambios en `pages/VirtualTryOn.tsx`; objetivo: gestos táctiles con Pointer Events, hit-test sobre alfa, capas en fracciones del lienzo, recorte de prendas en cliente estable, contadores/venta/lavadora, servidor de prendas/looks). **La rama WIP no está fusionada en main: puede no compilar.**
+- La app nativa NO ha pasado ninguna auditoría de seguridad propia ni se ha probado en un móvil real.
+
 ### 3.3 Cierre
 1. Compilar todo, `:app:testDebugUnitTest` verde, `:app:lintDebug` sin errores graves.
 2. Probar en emulador cada pantalla y flujo (ver §5), en claro y oscuro, con fuente grande y sin red. Arreglar visual/funcional.
