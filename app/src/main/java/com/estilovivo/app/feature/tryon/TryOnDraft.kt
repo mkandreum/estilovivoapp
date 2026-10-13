@@ -1,5 +1,6 @@
 package com.estilovivo.app.feature.tryon
 
+import com.estilovivo.app.core.image.Cutout
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
@@ -29,7 +30,7 @@ object DraftCodec {
         val h = Scene.height(aspect)
         val layers = d.layers.asSequence()
             .filter { it.id.isNotBlank() && it.url.isNotBlank() && it.width.isFinite() && it.cx.isFinite() && it.cy.isFinite() && it.aspect.isFinite() && it.aspect > 0f }
-            .map { LayerMath.clampToScene(it.copy(aspect = it.aspect.coerceIn(0.1f, 6f), cutout = it.cutout.coerceIn(0, Cutout.MAX_TOLERANCE)), h) }
+            .map { LayerMath.clampToScene(it.copy(aspect = it.aspect.coerceIn(0.1f, 6f), cutout = it.cutout.coerceIn(-1, Cutout.MAX_TOLERANCE), baseWidth = if (it.baseWidth > 0f) it.baseWidth else it.width), h) }
             .take(LayerMath.MAX_LAYERS)
             .toList()
         return d.copy(bodyAspect = aspect, layers = layers)

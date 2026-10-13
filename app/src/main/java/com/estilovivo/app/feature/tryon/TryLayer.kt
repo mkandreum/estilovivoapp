@@ -2,6 +2,7 @@ package com.estilovivo.app.feature.tryon
 
 import androidx.compose.runtime.Immutable
 import com.estilovivo.app.core.data.model.Garment
+import com.estilovivo.app.core.image.AlphaMask
 import com.estilovivo.app.core.data.model.TryonLayer
 import kotlinx.serialization.Serializable
 import kotlin.math.abs
@@ -43,6 +44,8 @@ data class TryLayer(
     /** Tolerancia del recorte de fondo aplicado (0 = imagen original). */
     val cutout: Int = 0,
     val category: TryCategory = TryCategory.Other,
+    /** Ancho inicial: la escala del usuario se acota a 0.2x-5x de este valor. */
+    val baseWidth: Float = 0f,
 ) {
     val height: Float get() = width * aspect
 }
@@ -75,13 +78,25 @@ object LayerMath {
     }
 
     /** Mantiene el centro dentro del lienzo y el ancho en un rango razonable: la capa nunca se pierde. */
-    fun clampToScene(l: TryLayer, sceneH: Float): TryLayer = l.copy(
-        width = l.width.coerceIn(MIN_WIDTH, MAX_WIDTH),
-        cx = l.cx.coerceIn(0f, 1f),
-        cy = l.cy.coerceIn(0f, sceneH),
-        opacity = l.opacity.coerceIn(MIN_OPACITY, 1f),
-        rotation = normalizeDeg(l.rotation),
-    )
+    private fun fin(v: Float, d: Float) = if (v.isNaN() || v.isInfinite()) d else v
+
+    fun widthRange(l: TryLayer): ClosedFloatingPointRange<Float> {
+        val base = if (l.baseWidth > 0f) l.baseWidth else l.width
+        val lo = maxOf(MIN_WIDTH, base * 0.2f)
+        val hi = maxOf(lo, minOf(MAX_WIDTH, base * 5f))
+        return lo..hi
+    }
+
+    fun clampToScene(l: TryLayer, sceneH: Float): TryLayer {
+        val r = widthRange(l)
+        return l.copy(
+            width = fin(l.width, r.start).coerceIn(r.start, r.endInclusive),
+            cx = fin(l.cx, 0.5f).coerceIn(0f, 1f),
+            cy = fin(l.cy, sceneH / 2f).coerceIn(0f, sceneH),
+            opacity = fin(l.opacity, 1f).coerceIn(MIN_OPACITY, 1f),
+            rotation = normalizeDeg(fin(l.rotation, 0f)),
+        )
+    }
 
     /**
      * Gesto combinado (arrastre + pellizco + giro) alrededor del punto [pivotX],[pivotY] (el centroide de
@@ -91,8 +106,10 @@ object LayerMath {
         l: TryLayer, sceneH: Float,
         panX: Float, panY: Float, zoom: Float, rotateDeg: Float, pivotX: Float, pivotY: Float,
     ): TryLayer {
-        val safeZoom = if (zoom.isNaN() || zoom <= 0f) 1f else zoom
-        val newWidth = (l.width * safeZoom).coerceIn(MIN_WIDTH, MAX_WIDTH)
+        if (listOf(panX, panY, rotateDeg, pivotX, pivotY).any { it.isNaN() || it.isInfinite() }) return l
+        val safeZoom = if (zoom.isNaN() || zoom.isInfinite() || zoom <= 0f) 1f else zoom
+        val range = widthRange(l)
+        val newWidth = (l.width * safeZoom).coerceIn(range.start, range.endInclusive)
         val z = newWidth / l.width
         val r = Math.toRadians(rotateDeg.toDouble())
         val cosR = cos(r).toFloat()
@@ -135,8 +152,24 @@ object LayerMath {
     }
 
     /** Capa más alta bajo el punto, o null. Capas con opacidad mínima siguen siendo seleccionables. */
-    fun hitTest(layers: List<TryLayer>, px: Float, py: Float, slop: Float = 0f): TryLayer? =
-        layers.asReversed().firstOrNull { contains(it, px, py, slop) }
+    fun hitTest(layers: List<TryLayer>, px: Float, py: Float, slop: Float = 0f, mask: (TryLayer) -> AlphaMask? = { null }): TryLayer? =
+        layers.asReversed().firstOrNull { containsOpaque(it, px, py, slop, mask(it)) }
+
+    /** Como [contains] pero ignorando los huecos transparentes (si hay [mask]). */
+    fun containsOpaque(l: TryLayer, px: Float, py: Float, slop: Float, mask: AlphaMask?): Boolean {
+        if (!contains(l, px, py, slop)) return false
+        if (mask == null) return true
+        val r = Math.toRadians(-l.rotation.toDouble())
+        val dx = px - l.cx
+        val dy = py - l.cy
+        var lx = (dx * cos(r) - dy * sin(r)).toFloat()
+        var ly = (dx * sin(r) + dy * cos(r)).toFloat()
+        if (l.flipX) lx = -lx
+        if (l.flipY) ly = -ly
+        val u = lx / l.width + 0.5f
+        val v = ly / l.height + 0.5f
+        return mask.opaqueAt(u.coerceIn(0f, 1f), v.coerceIn(0f, 1f), slop / l.width)
+    }
 
     /** Esquinas (sup-izq, sup-der, inf-der, inf-izq) en unidades de escena, con la rotación aplicada. */
     fun corners(l: TryLayer): List<Pair<Float, Float>> {
@@ -335,10 +368,10 @@ object LayerCodec {
         val base = if (isLegacy(a)) {
             val w = a.w / LEGACY_REF
             val h = a.h / LEGACY_REF
-            TryLayer(newId, a.garmentId, a.url, cx = (a.x + a.w / 2f) / LEGACY_REF, cy = (a.y + a.h / 2f) / LEGACY_REF, width = w, aspect = h / w)
+            TryLayer(newId, a.garmentId, a.url, cx = (a.x + a.w / 2f) / LEGACY_REF, cy = (a.y + a.h / 2f) / LEGACY_REF, width = w, aspect = h / w, baseWidth = w)
         } else {
             val aspect = a.h * sceneH / a.w
-            TryLayer(newId, a.garmentId, a.url, cx = a.x + a.w / 2f, cy = (a.y + a.h / 2f) * sceneH, width = a.w, aspect = aspect)
+            TryLayer(newId, a.garmentId, a.url, cx = a.x + a.w / 2f, cy = (a.y + a.h / 2f) * sceneH, width = a.w, aspect = aspect, baseWidth = a.w)
         }
         return LayerMath.clampToScene(
             base.copy(

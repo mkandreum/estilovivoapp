@@ -1,4 +1,4 @@
-package com.estilovivo.app.feature.tryon
+package com.estilovivo.app.core.image
 
 /**
  * Recorte de fondo uniforme sin dependencias: relleno por inundación (flood-fill) desde los bordes

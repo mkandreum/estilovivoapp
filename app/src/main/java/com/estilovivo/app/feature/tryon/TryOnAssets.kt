@@ -3,6 +3,8 @@ package com.estilovivo.app.feature.tryon
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.ImageBitmap
 import com.estilovivo.app.core.data.ImageUpload
+import com.estilovivo.app.core.image.AlphaMask
+import com.estilovivo.app.core.image.CutoutModelStatus
 import kotlinx.coroutines.flow.StateFlow
 import java.io.File
 
@@ -41,10 +43,22 @@ interface TryOnAssets {
 
     suspend fun garmentInfo(url: String): GarmentInfo?
 
+    /** Landmarks de pose (ML Kit, modelo incluido en el APK) en coordenadas normalizadas de la foto; null si no se detecta. */
+    suspend fun detectPose(path: String): BodyLandmarks?
+
     /** Garantiza en caché el bitmap de la prenda con ese recorte; devuelve false si no se pudo cargar. */
     suspend fun ensure(url: String, cutout: Int): Boolean
     fun garment(url: String, cutout: Int): ImageBitmap?
     fun failed(url: String): Boolean
+
+    /** Recorte inteligente (ML Kit con respaldo flood-fill) cacheado; true si se obtuvo un recorte real. */
+    suspend fun autoCutout(url: String): Boolean
+    /** Motivo por el que un recorte se rechazó o no fue posible (para mostrarlo). */
+    fun cutoutNote(url: String, cutout: Int): String?
+    /** Máscara de opacidad para el hit-test (null = usar el rectángulo). */
+    fun alphaMask(url: String, cutout: Int): AlphaMask?
+    /** "Preparando el recorte…" mientras se descarga el módulo de ML Kit. */
+    val cutoutStatus: StateFlow<CutoutModelStatus>
 
     /** PNG/JPEG de la composición en la caché `images/` (lado largo ≤ [maxSide]). */
     suspend fun render(spec: RenderSpec, maxSide: Int, jpeg: Boolean): File?

@@ -11,6 +11,7 @@ import com.estilovivo.app.core.data.repo.AuthRepository
 import com.estilovivo.app.core.data.repo.GarmentRepository
 import com.estilovivo.app.core.data.repo.LookRepository
 import com.estilovivo.app.core.data.repo.TryonPresetRepository
+import com.estilovivo.app.core.image.Cutout
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
@@ -272,7 +273,7 @@ class TryOnViewModel(
             val p = AutoPlacer.place(cat, info.aspect, sceneH)
             val layer = TryLayer(
                 id = newId(), garmentId = g.id, url = g.imageUrl, name = g.name, cx = p.cx, cy = p.cy, width = p.width,
-                aspect = info.aspect, cutout = info.autoCutout, category = cat,
+                aspect = info.aspect, category = cat, baseWidth = p.width,
             )
             var base = _layers.value
             if (base.size >= LayerMath.MAX_LAYERS) { toast("Máximo ${LayerMath.MAX_LAYERS} prendas a la vez.", true); return@launch }
@@ -369,7 +370,7 @@ class TryOnViewModel(
                 info ?: return@mapNotNull null
                 val cat = TryCatalog.categoryOf(g.type)
                 val p = AutoPlacer.place(cat, info.aspect, h)
-                TryLayer(newId(), g.id, g.imageUrl, g.name, p.cx, p.cy, p.width, info.aspect, cutout = info.autoCutout, category = cat)
+                TryLayer(newId(), g.id, g.imageUrl, g.name, p.cx, p.cy, p.width, info.aspect, category = cat, baseWidth = p.width)
             }
             if (built.isEmpty()) { toast("No se pudieron cargar las prendas. Comprueba tu conexión.", true); return@launch }
             val locked = _layers.value.filter { it.locked }

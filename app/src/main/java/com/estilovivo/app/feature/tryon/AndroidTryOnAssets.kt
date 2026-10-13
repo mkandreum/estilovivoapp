@@ -27,6 +27,16 @@ import coil3.request.allowHardware
 import coil3.size.Size as CoilSize
 import coil3.toBitmap
 import com.estilovivo.app.core.data.ImageUpload
+import com.estilovivo.app.core.image.AlphaMask
+import com.estilovivo.app.core.image.Cutout
+import com.estilovivo.app.core.image.CutoutCache
+import com.estilovivo.app.core.image.CutoutModelStatus
+import com.estilovivo.app.core.image.CutoutOptions
+import com.estilovivo.app.core.image.CutoutResult
+import com.estilovivo.app.core.image.FallbackGarmentCutout
+import com.estilovivo.app.core.image.FloodFillGarmentCutout
+import com.estilovivo.app.core.image.MlKitGarmentCutout
+import com.estilovivo.app.core.image.awaitResult
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -61,6 +71,14 @@ class AndroidTryOnAssets(context: Context) : TryOnAssets {
     }
     private val failedUrls = ConcurrentHashMap.newKeySet<String>()
     private val computeLock = Mutex()
+    private val masks = ConcurrentHashMap<String, AlphaMask>()
+    private val notes = ConcurrentHashMap<String, String>()
+    private val okKeys = ConcurrentHashMap.newKeySet<String>()
+    private val cache = CutoutCache(app)
+    private val mlKit = MlKitGarmentCutout(app)
+    private val flood = FloodFillGarmentCutout()
+    private val smart = FallbackGarmentCutout(mlKit, flood)
+    override val cutoutStatus: StateFlow<CutoutModelStatus> = mlKit.status
 
     // ── Foto base ─────────────────────────────────────────────────────────────────────────────
 
@@ -107,7 +125,7 @@ class AndroidTryOnAssets(context: Context) : TryOnAssets {
 
     // ── Prendas ───────────────────────────────────────────────────────────────────────────────
 
-    private fun key(url: String, cutout: Int) = "$url#${cutout.coerceAtLeast(0)}"
+    private fun key(url: String, cutout: Int) = "$url#$cutout"
 
     private suspend fun original(url: String): ImageBitmap? {
         garmentCache.get(key(url, 0))?.let { return it }
@@ -132,14 +150,45 @@ class AndroidTryOnAssets(context: Context) : TryOnAssets {
         }
     }
 
+    private val poseDetector by lazy {
+        com.google.mlkit.vision.pose.PoseDetection.getClient(
+            com.google.mlkit.vision.pose.defaults.PoseDetectorOptions.Builder()
+                .setDetectorMode(com.google.mlkit.vision.pose.defaults.PoseDetectorOptions.SINGLE_IMAGE_MODE).build(),
+        )
+    }
+
+    override suspend fun detectPose(path: String): BodyLandmarks? = withContext(Dispatchers.Default) {
+        var bmp: Bitmap? = null
+        try {
+            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeFile(path, bounds)
+            var sample = 1
+            while (bounds.outWidth / (sample * 2) >= 1024 && bounds.outHeight / (sample * 2) >= 1024) sample *= 2
+            bmp = BitmapFactory.decodeFile(path, BitmapFactory.Options().apply { inSampleSize = sample }) ?: return@withContext null
+            val pose = poseDetector.process(com.google.mlkit.vision.common.InputImage.fromBitmap(bmp, 0)).awaitResult()
+            val w = bmp.width.toFloat()
+            val h = bmp.height.toFloat()
+            fun p(type: Int): Pt? = pose.getPoseLandmark(type)?.let { Pt(it.position.x / w, it.position.y / h, it.inFrameLikelihood) }
+            val lm = run {
+                BodyLandmarks(
+                    nose = p(com.google.mlkit.vision.pose.PoseLandmark.NOSE), lShoulder = p(com.google.mlkit.vision.pose.PoseLandmark.LEFT_SHOULDER), rShoulder = p(com.google.mlkit.vision.pose.PoseLandmark.RIGHT_SHOULDER),
+                    lHip = p(com.google.mlkit.vision.pose.PoseLandmark.LEFT_HIP), rHip = p(com.google.mlkit.vision.pose.PoseLandmark.RIGHT_HIP), lKnee = p(com.google.mlkit.vision.pose.PoseLandmark.LEFT_KNEE), rKnee = p(com.google.mlkit.vision.pose.PoseLandmark.RIGHT_KNEE),
+                    lAnkle = p(com.google.mlkit.vision.pose.PoseLandmark.LEFT_ANKLE), rAnkle = p(com.google.mlkit.vision.pose.PoseLandmark.RIGHT_ANKLE), lWrist = p(com.google.mlkit.vision.pose.PoseLandmark.LEFT_WRIST), rWrist = p(com.google.mlkit.vision.pose.PoseLandmark.RIGHT_WRIST),
+                )
+            }
+            lm.takeIf { it.usable }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Throwable) {
+            null
+        } finally {
+            bmp?.recycle()
+        }
+    }
+
     override suspend fun garmentInfo(url: String): GarmentInfo? {
         val ib = original(url) ?: return null
-        val aspect = (ib.height.toFloat() / ib.width).coerceIn(0.1f, 6f)
-        val auto = withContext(Dispatchers.Default) {
-            val (px, w, h) = pixels(ib, AUTO_PROBE)
-            if (Cutout.isAutoCandidate(px, w, h) && Cutout.apply(px, w, h, Cutout.DEFAULT_TOLERANCE).ok) Cutout.DEFAULT_TOLERANCE else 0
-        }
-        return GarmentInfo(aspect, auto)
+        return GarmentInfo((ib.height.toFloat() / ib.width).coerceIn(0.1f, 6f), 0)
     }
 
     private fun pixels(ib: ImageBitmap, maxSide: Int): Triple<IntArray, Int, Int> {
@@ -154,23 +203,49 @@ class AndroidTryOnAssets(context: Context) : TryOnAssets {
         return Triple(px, w, h)
     }
 
+    private fun storeMask(k: String, ib: ImageBitmap) {
+        if (masks.containsKey(k)) return
+        val (px, w, h) = pixels(ib, 128)
+        masks[k] = AlphaMask.fromPixels(px, w, h)
+    }
+
     override suspend fun ensure(url: String, cutout: Int): Boolean {
-        val tol = cutout.coerceAtLeast(0)
         val orig = original(url) ?: return false
-        if (tol == 0 || garmentCache.get(key(url, tol)) != null) return true
+        storeMask(key(url, 0), orig)
+        if (cutout == 0 || garmentCache.get(key(url, cutout)) != null) return true
+        val k = key(url, cutout)
         computeLock.withLock {
-            if (garmentCache.get(key(url, tol)) != null) return true
-            val result = withContext(Dispatchers.Default) {
-                val (px, w, h) = pixels(orig, CUTOUT_WORK)
-                val r = Cutout.apply(px, w, h, tol)
-                if (!r.ok) null else Bitmap.createBitmap(r.pixels, w, h, Bitmap.Config.ARGB_8888).asImageBitmap()
+            if (garmentCache.get(k) != null) return true
+            val cached = if (cutout < 0) cache.get(k) else null
+            if (cached != null) {
+                val ib = cached.asImageBitmap()
+                garmentCache.put(k, ib); storeMask(k, ib); okKeys += k; _revision.value++
+                return true
             }
-            // Si el recorte no es fiable se deja la original bajo esa clave (la capa se ve igual que sin recorte).
-            garmentCache.put(key(url, tol), result ?: orig)
+            val src = orig.asAndroidBitmap()
+            val opts = CutoutOptions(tolerance = if (cutout > 0) cutout else Cutout.DEFAULT_TOLERANCE, maxSide = 1280, crop = false)
+            val r = if (cutout < 0) smart.cutOut(src, opts) else flood.cutOut(src, opts)
+            when (r) {
+                is CutoutResult.Success -> {
+                    val ib = r.bitmap.asImageBitmap()
+                    garmentCache.put(k, ib); storeMask(k, ib); okKeys += k; notes.remove(k)
+                    if (cutout < 0) cache.put(k, r.bitmap)
+                }
+                is CutoutResult.Rejected -> { notes[k] = r.message; garmentCache.put(k, orig) }
+                is CutoutResult.Failed -> { notes[k] = r.message; garmentCache.put(k, orig) }
+            }
             _revision.value++
         }
         return true
     }
+
+    override suspend fun autoCutout(url: String): Boolean {
+        if (!ensure(url, -1)) return false
+        return key(url, -1) in okKeys
+    }
+
+    override fun cutoutNote(url: String, cutout: Int): String? = notes[key(url, cutout)]
+    override fun alphaMask(url: String, cutout: Int): AlphaMask? = masks[key(url, cutout)] ?: masks[key(url, 0)]
 
     override fun garment(url: String, cutout: Int): ImageBitmap? =
         garmentCache.get(key(url, cutout)) ?: garmentCache.get(key(url, 0))
@@ -279,7 +354,9 @@ class AndroidTryOnAssets(context: Context) : TryOnAssets {
     override suspend fun bodyUpload(path: String): ImageUpload? = ImageUpload.fromFile(File(path))
 
     override fun release() {
+        runCatching { poseDetector.close() }
         garmentCache.evictAll()
+        masks.clear(); notes.clear(); okKeys.clear()
         bodyCache = null
         failedUrls.clear()
     }
