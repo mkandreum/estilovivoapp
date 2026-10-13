@@ -14,7 +14,17 @@ class EvNavigator(
     private val selectTab: (MainTab) -> Unit,
 ) {
     /** Navega a una ruta serializable de [Routes.kt]. */
-    fun navigate(route: Any) { controller?.navigate(route) }
+    fun navigate(route: Any) { tryNavigate(route) }
+
+    /** Como [navigate] pero devuelve `false` (sin crashear) si la ruta no existe o la navegación no es posible. */
+    fun tryNavigate(route: Any): Boolean = try {
+        controller?.navigate(route)
+        controller != null
+    } catch (_: IllegalArgumentException) {
+        false
+    } catch (_: IllegalStateException) {
+        false
+    }
 
     fun back() { controller?.popBackStack() }
 
@@ -26,6 +36,7 @@ class EvNavigator(
 
     /** Cierra toda la sesión visual y vuelve a la bienvenida (logout / sesión caducada). */
     fun resetToWelcome() {
+        selectTab(MainTab.Home) // la próxima sesión empieza siempre en Inicio
         controller?.navigate(Welcome) {
             popUpTo(0) { inclusive = true }
             launchSingleTop = true
@@ -34,6 +45,7 @@ class EvNavigator(
 
     /** Entra en la app principal limpiando la pila de autenticación. */
     fun enterMain() {
+        selectTab(MainTab.Home)
         controller?.navigate(Main) {
             popUpTo(0) { inclusive = true }
             launchSingleTop = true

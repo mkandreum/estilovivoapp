@@ -1,6 +1,8 @@
 package com.estilovivo.app
 
+import android.content.Intent
 import android.os.Bundle
+import com.estilovivo.app.feature.notifications.NotificationLinks
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -28,10 +30,18 @@ class MainActivity : ComponentActivity() {
     private val session: SessionManager by inject()
     private val prefs: AppPrefs by inject()
 
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        NotificationLinks.offer(intent)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        // Si se abrió desde una notificación del sistema, EvApp navega al destino cuando haya sesión
+        if (savedInstanceState == null) NotificationLinks.offer(intent)
 
         // Destino inicial: si hay tokens guardados (access o refresh) se entra directo; el refresh es transparente.
         val start: Any = if (session.hasSession) Main else Welcome

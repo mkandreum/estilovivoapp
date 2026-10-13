@@ -7,7 +7,18 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.currentStateAsState
+import com.estilovivo.app.core.design.components.LocalEvToast
+import kotlinx.coroutines.delay
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -50,6 +61,20 @@ fun MainShell(tab: MainTab, onTabChange: (MainTab) -> Unit) {
     val nav = LocalNavigator.current
     var bubblesOpen by remember { mutableStateOf(false) }
     val washing = rememberWashingCount()
+    val toast = LocalEvToast.current
+    val context = LocalContext.current
+    val lifecycleState by LocalLifecycleOwner.current.lifecycle.currentStateAsState()
+    // Sólo manda la pestaña cuando es la pantalla visible (no mientras hay otra apilada encima)
+    val isTop = lifecycleState.isAtLeast(Lifecycle.State.RESUMED)
+    var exitArmed by remember { mutableStateOf(false) }
+    LaunchedEffect(exitArmed) { if (exitArmed) { delay(2000); exitArmed = false } }
+
+    // 1) Cerrar las burbujas del armario primero; 2) doble atrás para salir
+    BackHandler(enabled = isTop && bubblesOpen) { bubblesOpen = false }
+    BackHandler(enabled = isTop && !bubblesOpen) {
+        if (exitArmed) context.findActivity()?.finish()
+        else { exitArmed = true; toast.show("Pulsa de nuevo para salir") }
+    }
 
     val items = remember(washing) {
         listOf(
@@ -110,4 +135,10 @@ fun MainShell(tab: MainTab, onTabChange: (MainTab) -> Unit) {
             modifier = Modifier.align(Alignment.BottomCenter),
         )
     }
+}
+
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
 }
