@@ -1,144 +1,70 @@
-# Estilo Vivo
+# EstiloVivo — App Android
 
-**Estilo Vivo** es una aplicación web de moda para gestionar tu armario digital, crear looks, planificar viajes, compartir con la comunidad y chatear con usuarios.
+Contenedor nativo (Capacitor 8) de la web **https://estilovivo.xyoncloud.win**.
 
-## 🌟 Qué incluye
+La APK **no empaqueta el frontend**: abre la web de producción en un WebView y expone
+los plugins nativos al JavaScript de la web mediante el bridge de Capacitor. Cualquier
+cambio desplegado en la web llega a la app sin publicar una nueva versión.
 
-- Gestión de prendas, looks y planes
-- Perfil de usuario con preferencias y notificaciones por email
-- Autenticación con JWT y `rememberMe`
-- PWA + iconos y manifest
-- Backend Express + Prisma + SQLite
-- Deploy con Docker Compose
+El código de la web y del backend vive en el repo de la web
+(`romecabezasjamd/estilovivo`).
 
-## 🧱 Stack técnico
+## Plugins nativos incluidos
 
-- Frontend: React 19 + TypeScript + Vite
-- Backend: Express + TypeScript
-- ORM: Prisma
-- Base de datos: SQLite (`DATABASE_URL=file:./data/dev.db`)
-- PWA: `manifest.json` + `icon-192.png` / `icon-512.png`
-- Build: `npm run build` (frontend) / `npm run build` (servidor)
+| Plugin | Uso en la web |
+|---|---|
+| `@capacitor/app` | Botón atrás, deep links |
+| `@capacitor/camera` | Fotos de prendas y probador |
+| `@capacitor/filesystem` | Guardar/compartir imágenes |
+| `@capacitor/splash-screen` | Splash de arranque |
+| `@capacitor-firebase/*` | Push, Analytics, Crashlytics |
+| `@capacitor-community/in-app-review` | Valoración en Play Store |
+| `capacitor-plugin-cdv-purchase` | Suscripción Premium (Google Play Billing) |
+| `EncryptedStorage` (propio) | Tokens de sesión cifrados (AES-256-GCM) |
 
-## 📁 Estructura principal
+> Si añades un plugin nativo nuevo en la web, añádelo también aquí (`npm i <plugin>`
+> + `npm run sync`) y publica una nueva versión de la app.
 
-```
-estilovivo/
-├── server/                 # Backend Express + Prisma
-│   ├── src/                # Código backend
-│   ├── prisma/             # Prisma schema y configuración
-│   ├── package.json
-│   └── tsconfig.json
-├── components/             # Componentes React
-├── pages/                  # Páginas React
-├── public/                 # Archivos estáticos + PWA icons
-├── Dockerfile              # Imagen de producción
-├── docker-compose.yaml     # Deployment con Docker Compose
-├── .env.example            # Variables de entorno de ejemplo
-└── README.md
-```
+## Requisitos
 
-## 🚀 Desarrollo local
+- Node 20+
+- JDK 21 y Android SDK 36 (Android Studio)
 
-1. Copia el archivo de ejemplo:
-
-```bash
-cp .env.example .env
-```
-
-2. Instala dependencias y arranca el frontend:
+## Desarrollo
 
 ```bash
 npm install
-npm run dev
+npm run sync      # genera android/capacitor.config.json y los proyectos de plugins
+npm run open      # abre Android Studio
 ```
 
-3. Arranca el backend desde `server/` si es necesario:
+Apuntar a otro servidor (p. ej. local o staging):
 
 ```bash
-cd server
-npm install
-npm run dev
+ESTILOVIVO_WEB_URL=https://staging.ejemplo.com npm run sync
 ```
 
-> El frontend accede a la API usando los endpoints configurados en `services/api.ts`.
+## Release (Play Store)
 
-## 🛠️ Preparar producción
+1. Coloca `google-services.json` en `android/app/` (no se versiona).
+2. Exporta las variables de firma y versión:
+   ```bash
+   export KEYSTORE_PATH=/ruta/release.keystore KEYSTORE_PASSWORD=*** KEY_ALIAS=estilovivo KEY_PASSWORD=***
+   export VERSION_CODE=2 VERSION_NAME=1.0.1
+   ```
+3. `npm run build:release` → `android/app/build/outputs/bundle/release/app-release.aab`
 
-### 1. Copia el ejemplo de variables
+## Requisitos del lado web
 
-```bash
-cp .env.example .env
-```
+- Deep links verificados (`https://estilovivo.xyoncloud.win/...`): el servidor web debe
+  servir `/.well-known/assetlinks.json` con el SHA-256 del certificado de firma de Play.
+  El backend lo sirve desde la variable `ANDROID_SHA256_FINGERPRINTS`.
+- El backend debe permitir CORS para `https://localhost` / `capacitor://localhost`
+  (ya incluido).
 
-### 2. Ajusta los valores importantes
+## Seguridad
 
-En `.env` debes definir al menos:
-
-```env
-DATABASE_URL="file:./data/dev.db"
-JWT_SECRET="tu_secreto_super_seguro"
-PORT=3000
-NODE_ENV=production
-UPLOADS_DIR="/app/uploads"
-GEMINI_API_KEY=
-SMTP_HOST=
-SMTP_PORT=587
-SMTP_USER=
-SMTP_PASS=
-```
-
-### 3. Construye y despliega con Docker Compose
-
-```bash
-docker compose up --build -d
-```
-
-La aplicación será accesible en `http://localhost:3000` cuando se despliegue localmente.
-
-### 4. Accede a la aplicación
-
-La app quedará disponible en `http://localhost:3000` si la ejecutas localmente.
-
-## 📦 Docker Compose actual
-
-La configuración de `docker-compose.yaml` usa SQLite y persiste:
-
-- `sqlite_data` → archivo de base de datos `./data/dev.db`
-- `uploads_data` → imágenes subidas
-
-Esto evita dependencias externas en producción y permite desplegar con un único contenedor.
-
-## 🧪 Validación
-
-### Frontend
-
-```bash
-npm run build
-```
-
-### Backend
-
-```bash
-cd server
-npm run build
-npx vitest run
-```
-
-## 🌐 API rápida
-
-- `GET /api/health`
-- `POST /api/auth/register`
-- `POST /api/auth/login`
-- `GET /api/auth/me`
-- `POST /api/auth/logout`
-- `GET /api/products`
-- `POST /api/products`
-- `GET /api/looks`
-- `POST /api/looks`
-
-## 📌 Notas importantes
-
-- El proyecto actual usa SQLite en producción con Docker Compose.
-- Si quieres usar PostgreSQL a futuro, deberás adaptar `server/prisma/schema.prisma` y la inicialización de Prisma.
-- El `docker-compose.yaml` ya no requiere un servicio de postgres.
+- Sólo HTTPS (`cleartextTrafficPermitted=false`); el tráfico a CA de usuario sólo en debug.
+- `allowNavigation` restringido al dominio propio: enlaces externos se abren en el navegador.
+- Sin backups de datos de la app (`allowBackup=false`, `data_extraction_rules`).
+- Depuración remota del WebView desactivada en release.

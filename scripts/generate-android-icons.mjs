@@ -9,8 +9,8 @@ import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..');
-const ICON_SRC = path.join(ROOT, 'public', 'estilo-vivo-logo-icon.png');
-const FULL_SRC = path.join(ROOT, 'public', 'estilo-vivo-logo-full.png');
+const ICON_SRC = path.join(ROOT, 'resources', 'estilo-vivo-logo-icon.png');
+const FULL_SRC = path.join(ROOT, 'resources', 'estilo-vivo-logo-full.png');
 const RES = path.join(ROOT, 'android', 'app', 'src', 'main', 'res');
 
 const LAUNCHER = {

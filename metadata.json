@@ -1,7 +1,0 @@
-{
-  "name": "Estilo Vivo",
-  "description": "Un armario virtual inteligente, emocional y social. Organiza, planifica y conecta a través de la moda consciente.",
-  "requestFramePermissions": [
-    "camera"
-  ]
-}

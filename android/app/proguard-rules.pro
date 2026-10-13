@@ -25,3 +25,14 @@
 # Keep Room/SQLite
 -keep class * extends androidx.room.RoomDatabase { *; }
 -keep @androidx.room.Entity class * { *; }
+
+# Plugins de Capacitor usados por la app (se resuelven por reflexión)
+-keep @com.getcapacitor.annotation.CapacitorPlugin class * { *; }
+-keep class com.estilovivo.app.** { *; }
+-keep class com.capacitorjs.plugins.** { *; }
+-keep class io.capawesome.capacitorjs.plugins.** { *; }
+-keep class com.getcapacitor.community.** { *; }
+-keep class cc.fovea.** { *; }
+-dontwarn cc.fovea.**
+-keep class com.android.billingclient.** { *; }
+-keep class org.apache.cordova.** { *; }
