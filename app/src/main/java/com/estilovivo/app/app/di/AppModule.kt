@@ -6,6 +6,7 @@ import com.estilovivo.app.feature.home.homeModule
 import com.estilovivo.app.feature.notifications.notificationsModule
 import com.estilovivo.app.feature.planner.plannerModule
 import com.estilovivo.app.feature.profile.profileModule
+import com.estilovivo.app.feature.social.shop.shopChatModule
 import com.estilovivo.app.feature.social.socialModule
 import com.estilovivo.app.feature.suitcase.suitcaseModule
 import com.estilovivo.app.feature.tryon.tryonModule
@@ -16,4 +17,5 @@ val appModules = listOf(
     dataModule,
     authModule, homeModule, wardrobeModule, plannerModule, suitcaseModule,
     tryonModule, socialModule, profileModule, notificationsModule,
+    shopChatModule,
 )

@@ -1,4 +1,4 @@
-package com.estilovivo.app.feature.social
+package com.estilovivo.app.feature.social.shop
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
@@ -33,6 +33,7 @@ import androidx.compose.material.icons.rounded.ChatBubbleOutline
 import androidx.compose.material.icons.rounded.ChevronLeft
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.ExpandMore
+import androidx.compose.material.icons.rounded.IosShare
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -100,6 +101,8 @@ fun ProductDetailScreen(
     onContact: () -> Unit,
     onSellerClick: () -> Unit,
     modifier: Modifier = Modifier,
+    onShare: (() -> Unit)? = null,
+    contacting: Boolean = false,
 ) {
     val c = EvTheme.colors
     val pager = rememberPagerState(pageCount = { item.images.size.coerceAtLeast(1) })
@@ -116,9 +119,12 @@ fun ProductDetailScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 EvCircleButton(Icons.AutoMirrored.Rounded.ArrowBack, onBack, contentDescription = "Volver")
-                Text("Detalle del producto", style = EvType.subtitle, color = c.ink)
-                Box(Modifier.size(44.dp), contentAlignment = Alignment.Center) {
-                    EvLikeButton(liked = item.liked, onToggle = onToggleLike, size = 44.dp, container = c.surface)
+                Text("Detalle", style = EvType.subtitle, color = c.ink)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    if (onShare != null) EvCircleButton(Icons.Rounded.IosShare, onShare, contentDescription = "Compartir enlace")
+                    Box(Modifier.size(44.dp), contentAlignment = Alignment.Center) {
+                        EvLikeButton(liked = item.liked, onToggle = onToggleLike, size = 44.dp, container = c.surface)
+                    }
                 }
             }
 
@@ -177,16 +183,19 @@ fun ProductDetailScreen(
 
             // Tallas
             if (item.sizes.isNotEmpty()) {
-                Row(
-                    Modifier.padding(horizontal = EvSpace.screen).padding(top = 20.dp).staggeredEntrance(2),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    item.sizes.forEach { size ->
-                        EvChip(text = size, selected = size == selectedSize, onClick = { selectedSize = size })
+                Column(Modifier.padding(horizontal = EvSpace.screen).padding(top = 20.dp).staggeredEntrance(2), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Talla", style = EvType.caption, color = c.inkMuted)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        item.sizes.forEach { size ->
+                            EvChip(text = size, selected = size == selectedSize, onClick = { selectedSize = size })
+                        }
                     }
                 }
             } else if (item.size != null) {
-                Row(Modifier.padding(horizontal = EvSpace.screen).padding(top = 20.dp)) { EvChip(item.size, true, {}) }
+                Column(Modifier.padding(horizontal = EvSpace.screen).padding(top = 20.dp).staggeredEntrance(2), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Talla", style = EvType.caption, color = c.inkMuted)
+                    EvChip(item.size, true, {})
+                }
             }
 
             // Detalles desplegables
@@ -230,7 +239,7 @@ fun ProductDetailScreen(
             ) {
                 EvPillButton(
                     text = "Chatear con ${item.sellerName.substringBefore(' ')}",
-                    onClick = onContact, icon = Icons.Rounded.ChatBubbleOutline,
+                    onClick = onContact, icon = Icons.Rounded.ChatBubbleOutline, loading = contacting,
                     modifier = Modifier.fillMaxWidth(), height = 62.dp,
                 )
             }

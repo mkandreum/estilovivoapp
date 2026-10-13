@@ -237,6 +237,11 @@ internal class Mappers(val assets: AssetUrls) {
             size = p.size.orNull() ?: "Única",
             brand = p.brand.orNull() ?: "Sin marca",
             condition = p.condition.orNull() ?: "new",
+            images = p.images.orEmpty().mapNotNull { assets.resolve(it.url.orNull()) },
+            color = p.color.orNull(),
+            description = p.description.orNull(),
+            category = p.category.orEmpty(),
+            createdAt = p.createdAt.orEmpty(),
         )
     }
 

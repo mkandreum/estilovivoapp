@@ -122,6 +122,13 @@ data class ShopItem(
     val size: String,
     val brand: String,
     val condition: String,
+    /** Todas las fotos (la primera es [image]). */
+    val images: List<String> = emptyList(),
+    val color: String? = null,
+    val description: String? = null,
+    /** Categoría del servidor (top, bottom, dress, outerwear...). */
+    val category: String = "",
+    val createdAt: String = "",
 )
 
 /** Favorito: look o prenda (uno de los dos). */
