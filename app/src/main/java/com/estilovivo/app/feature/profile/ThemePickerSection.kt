@@ -43,6 +43,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
@@ -157,6 +158,7 @@ private fun Swatch(
 ) {
     val c = EvTheme.colors
     val ring by animateColorAsState(if (selected) c.ink else Color.Transparent, tween(220), label = "swatchRing")
+    val checkScale by animateFloatAsState(if (selected) 1f else 0f, EvMotion.bouncy(), label = "swatchCheck")
     val checkOn = color.let { BrandMath.onColor(((it.red * 255f).toInt() shl 16) or ((it.green * 255f).toInt() shl 8) or (it.blue * 255f).toInt()) }
     val checkColor = if (rainbow) c.ink else if (checkOn == 0xFFFFFF) Color.White else Color.Black
     Column(
@@ -174,9 +176,10 @@ private fun Swatch(
                 .evClickable(pressedScale = 0.88f, haptic = false, onClick = onClick),
             contentAlignment = Alignment.Center,
         ) {
-            AnimatedVisibility(selected, enter = scaleIn(EvMotion.bouncy()) + fadeIn(), exit = scaleOut() + fadeOut()) {
-                Icon(Icons.Rounded.Check, null, tint = checkColor, modifier = Modifier.size(24.dp))
-            }
+            Icon(
+                Icons.Rounded.Check, null, tint = checkColor,
+                modifier = Modifier.size(24.dp).graphicsLayer { scaleX = checkScale; scaleY = checkScale; alpha = checkScale.coerceIn(0f, 1f) },
+            )
             if (!selected && icon != null) Icon(icon, null, tint = Color.White, modifier = Modifier.size(22.dp))
         }
         Text(label, style = EvType.caption, color = if (selected) c.ink else c.inkSoft, maxLines = 1)
