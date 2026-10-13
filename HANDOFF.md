@@ -62,6 +62,16 @@ Crear worktree: `git worktree add ../wt/<m> -b feat-<m>` + copiar `local.propert
 
 **notifications** (`feature/notifications/`; web: `components/NotificationBell.tsx`, `src/context/NotificationContext.tsx`, `src/utils/notifications.ts`): campana real (`NotificationRepository.unreadCount` + badge animado, vibración sutil al llegar por socket), pantalla `Notifications` (lista agrupada por día, marcar leída/todas, tocar → navegar: CHAT→`Chat(relatedId)`, LIKE/COMMENT→Social feed, FOLLOW→`UserProfile(relatedId)` o Perfil si "quiere seguirte", WASHING→Armario, STORY_REACTION→`Chat`), vacíos y errores. Push (FCM): hace falta `google-services.json` y envío desde servidor (no existe aún) → dejarlo preparado/documentado. **Pulido transversal** en este módulo: aplicar `AppPrefs.haptics`/`highContrast` en `core/design`, banner de sin conexión, botón atrás con modales, estados de carga consistentes.
 
+### 3.2b Temas de color por perfil (pedido del cliente, pendiente)
+"Que cada perfil pueda cambiar el tema/color manteniendo la estética de la app". Servidor y modelo ya soportan `themePreset` y `customColor` (`User`, `PreferencesUpdate`, `AuthRepository.updatePreferences`). Presets de la web (`web/src/utils/themePresets.ts`): pink, blue, green, lavender, amber, rose, indigo, teal, forest, midnight, petrol… + "clásico" (negro editorial actual, **por defecto en nativa**) + color personalizado (hex).
+Diseño: SOLO cambia el color de marca; el resto (lienzo gris, tarjetas blancas, tipografía, formas, movimiento) no cambia, para conservar la estética editorial.
+- `EvColors` gana `brand`, `onBrand` (negro/blanco automático por contraste ≥ 4.5:1), `brandSoft` (brand al ~12 % sobre la superficie). Derivar variantes distintas para claro y oscuro (aclarar en oscuro).
+- Usan `brand`: `EvPillButton` Primary, `EvChip`/`EvSegmented` seleccionados, indicador activo de `EvBottomBar`, anillo/barras de XP y progreso, enlaces, `EvLoadingDots`, switches. NO cambian: fondos, tarjetas, texto, la pista oscura del deslizador de bienvenida.
+- Aplicación: `AppPrefs` guarda `themePreset/customColor` para pintar el tema al arrancar sin red; al iniciar sesión se sincroniza desde el perfil del servidor; cambio animado (fundido de color ~320 ms, ya existe para claro/oscuro en `EvTheme`).
+- UI: Perfil → Ajustes → "Tema": carrusel de muestras con vista previa en vivo (mini tarjeta con botón/chip/barra), selector de color propio (tono + saturación + brillo, con aviso/corrección si el contraste es insuficiente), guardado optimista con rollback (`updatePreferences(themePreset=..., customColor=...)`).
+- Tests: contraste `onBrand`, derivación claro/oscuro, parseo/validación de hex, preset desconocido → clásico.
+Hacerlo DESPUÉS de integrar `feat-notifications` (ambos tocan `core/design/Theme.kt`).
+
 ### 3.3 Cierre
 1. Compilar todo, `:app:testDebugUnitTest` verde, `:app:lintDebug` sin errores graves.
 2. Probar en emulador cada pantalla y flujo (ver §5), en claro y oscuro, con fuente grande y sin red. Arreglar visual/funcional.
