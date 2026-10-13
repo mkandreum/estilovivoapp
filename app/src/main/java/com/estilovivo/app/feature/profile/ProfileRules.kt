@@ -47,11 +47,6 @@ object ProfileRules {
 
     // ───────── Perfil ─────────
 
-    sealed interface Check {
-        data object Ok : Check
-        data class Problem(val message: String) : Check
-    }
-
     fun validateName(name: String): String? {
         val n = name.trim()
         return when {
