@@ -37,5 +37,11 @@ import kotlinx.serialization.Serializable
 @Serializable data class StoryViewer(val storyId: String)
 @Serializable data object ChallengeHistory
 
+
+// Perfil (ajustes)
+@Serializable data object EditProfile
+@Serializable data object ChangePassword
+@Serializable data object FollowRequests
+
 /** Pestañas de la barra inferior. */
 enum class MainTab(val id: String) { Home("home"), Wardrobe("wardrobe"), Social("social"), Profile("profile") }
