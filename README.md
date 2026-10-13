@@ -7,7 +7,7 @@ los plugins nativos al JavaScript de la web mediante el bridge de Capacitor. Cua
 cambio desplegado en la web llega a la app sin publicar una nueva versión.
 
 El código de la web y del backend vive en el repo de la web
-(`romecabezasjamd/estilovivo`).
+([mkandreum/estilovivo](https://github.com/mkandreum/estilovivo)).
 
 ## Plugins nativos incluidos
 
