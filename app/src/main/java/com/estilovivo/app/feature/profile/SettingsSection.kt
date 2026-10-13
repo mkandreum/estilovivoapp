@@ -182,7 +182,7 @@ fun SettingsSection() {
             Column(Modifier.padding(vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                     Icon(Icons.Rounded.Palette, null, tint = c.ink)
-                    Text("Tema", style = EvType.label, color = c.ink)
+                    Text("Modo", style = EvType.label, color = c.ink)
                 }
                 EvSegmented(
                     ThemeMode.entries, s.local.themeMode, vm::setThemeMode,
@@ -190,6 +190,8 @@ fun SettingsSection() {
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
+            Divider()
+            ThemePickerSection(s.local, vm::setBrandTheme)
             Divider()
             FontScaleRow(s.local.fontScale, vm::setFontScale)
             Divider()
