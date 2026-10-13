@@ -16,7 +16,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.estilovivo.app.app.EvApp
 import com.estilovivo.app.app.Main
 import com.estilovivo.app.app.Welcome
-import android.content.Intent
 import com.estilovivo.app.core.data.session.AppPrefs
 import com.estilovivo.app.feature.auth.DeepLinkHub
 import com.estilovivo.app.core.data.session.SessionEvent
@@ -32,12 +31,6 @@ class MainActivity : ComponentActivity() {
     private val session: SessionManager by inject()
     private val prefs: AppPrefs by inject()
     private val deepLinks: DeepLinkHub by inject()
-
-    override fun onNewIntent(intent: Intent) {
-        super.onNewIntent(intent)
-        setIntent(intent)
-        NotificationLinks.offer(intent)
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
@@ -78,6 +71,7 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        NotificationLinks.offer(intent)
         handleLink(intent)
     }
 
