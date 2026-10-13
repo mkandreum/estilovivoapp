@@ -72,6 +72,16 @@ Diseño: SOLO cambia el color de marca; el resto (lienzo gris, tarjetas blancas,
 - Tests: contraste `onBrand`, derivación claro/oscuro, parseo/validación de hex, preset desconocido → clásico.
 Hacerlo DESPUÉS de integrar `feat-notifications` (ambos tocan `core/design/Theme.kt`).
 
+### 3.2c Recorte de prendas y probador (prioridad del cliente: "que se haga bien y estable")
+La web falla en: ponerse ropa sobre la foto con los dedos, y el recorte de la ropa al subirla. En nativa:
+- `core/image/GarmentCutout` (lo crea el agente `tryon`): ML Kit Subject Segmentation + fallback flood-fill, previsualización antes/después, caché por prenda.
+- **Pendiente tras integrar `feat-tryon`**: conectar `GarmentCutout` al flujo de AÑADIR/EDITAR prenda del módulo `feature/wardrobe` (el agente de Armario NO lo hizo): tras elegir la foto, ofrecer "Quitar fondo" (activado por defecto) con vista previa y opción de usar la original; subir PNG con alfa. Ojo: el servidor (`imageProcessor.ts`) convierte a webp y hace un trim de blancos/grises; comprobar que el alfa se conserva (webp con alfa) y que `removeBg=true` no destroza el recorte ya hecho.
+- Auto-ajuste con ML Kit Pose Detection en el Probador y gestos multitáctiles propios (ver prompt de ampliación en el historial del agente `tryon`).
+- Probar SIEMPRE en un móvil real con dos dedos (el emulador no simula bien el pellizco).
+
+### 3.2d Funciones de la web NO cubiertas aún (decidir)
+Idioma/dialecto (`LanguageContext`/`translations.ts`, la app está sólo en español), presets de tema de la web (ver 3.2b), `musicSync`, ubicación en el quiz del onboarding, push FCM, Play Billing, ruta `/look/{id}` (deep link sin destino), exportar datos (la web lo promete en Privacy y no existe), alertas de precio (inexistentes en la web).
+
 ### 3.3 Cierre
 1. Compilar todo, `:app:testDebugUnitTest` verde, `:app:lintDebug` sin errores graves.
 2. Probar en emulador cada pantalla y flujo (ver §5), en claro y oscuro, con fuente grande y sin red. Arreglar visual/funcional.
