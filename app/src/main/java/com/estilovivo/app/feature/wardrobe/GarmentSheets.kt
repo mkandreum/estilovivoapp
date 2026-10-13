@@ -192,10 +192,6 @@ private fun LimitedField(value: String, onChange: (String) -> Unit, label: Strin
     )
 }
 
-/** Convierte la foto elegida; devuelve null (con aviso) si no se pudo leer. */
-private suspend fun readUpload(context: android.content.Context, uri: String?): ImageUpload? =
-    uri?.let { ImageUpload.fromUri(context, Uri.parse(it)) }
-
 private const val READ_ERROR = "No se pudo leer la foto. Vuelve a elegirla."
 
 // ── Nueva prenda ─────────────────────────────────────────────────────────────────────────────
@@ -215,6 +211,7 @@ fun AddGarmentSheet(
     var photoProblem by remember { mutableStateOf<String?>(null) }
     var converting by remember { mutableStateOf(false) }
     var serverError by remember { mutableStateOf(initialError) }
+    val cutout = rememberPhotoCutout(form.photoUri)
 
     FormScaffold(
         headline = "Nueva *prenda*", primaryLabel = "Añadir al armario", loading = converting,
@@ -224,15 +221,17 @@ fun AddGarmentSheet(
             if (e.any) return@FormScaffold
             scope.launch {
                 converting = true
-                val up = readUpload(context, form.photoUri)
+                val chosen = cutout.effectiveUri(form.photoUri)
+                val up = readGarmentUpload(context, chosen, form.photoUri)
                 converting = false
-                if (up == null) photoProblem = READ_ERROR else { onSubmit(form, up); onClose() }
+                if (up == null) photoProblem = READ_ERROR else { onSubmit(form.copy(photoUri = chosen), up); onClose() }
             }
         },
         onCancel = onClose,
     ) {
         ErrorBanner(serverError)
         PhotoField(form.photoUri, null, photoProblem ?: errors.photo, { form = form.copy(photoUri = it); photoProblem = null; errors = errors.copy(photo = null) }, { photoProblem = it })
+        CutoutSection(cutout, form.photoUri)
         LimitedField(form.name, { form = form.copy(name = it); serverError = null; if (errors.name != null) errors = errors.copy(name = null) }, "Nombre (p. ej. Camiseta de rayas)", GarmentLimits.NAME, error = errors.name)
         Field("Categoría") { OptionChips(WardrobeCatalog.categories, form.category, { form = form.copy(category = it) }) }
         Field("Color") {
@@ -262,6 +261,7 @@ fun EditGarmentSheet(
     var errors by remember { mutableStateOf(FormErrors()) }
     var photoProblem by remember { mutableStateOf<String?>(null) }
     var converting by remember { mutableStateOf(false) }
+    val cutout = rememberPhotoCutout(form.photoUri)
 
     FormScaffold(
         headline = "Editar *prenda*", primaryLabel = "Guardar cambios", loading = submitting || converting,
@@ -271,19 +271,22 @@ fun EditGarmentSheet(
             if (e.any) return@FormScaffold
             scope.launch {
                 var up: ImageUpload? = null
+                var chosen = form.photoUri
                 if (form.photoUri != null) {
                     converting = true
-                    up = readUpload(context, form.photoUri)
+                    chosen = cutout.effectiveUri(form.photoUri)
+                    up = readGarmentUpload(context, chosen, form.photoUri)
                     converting = false
                     if (up == null) { photoProblem = READ_ERROR; return@launch }
                 }
-                onSubmit(form, up)
+                onSubmit(form.copy(photoUri = chosen), up)
             }
         },
         onCancel = onClose,
     ) {
         ErrorBanner(serverError)
         PhotoField(form.photoUri, garment.imageUrl, photoProblem, { form = form.copy(photoUri = it); photoProblem = null }, { photoProblem = it }, title = "Cambia la foto")
+        CutoutSection(cutout, form.photoUri)
         LimitedField(form.name, { form = form.copy(name = it); onClearServerError(); if (errors.name != null) errors = errors.copy(name = null) }, "Nombre", GarmentLimits.NAME, error = errors.name)
         Field("Categoría") { OptionChips(WardrobeCatalog.categories, form.category, { form = form.copy(category = it) }) }
         Field("Color") {
@@ -346,6 +349,7 @@ fun SaleSheet(
     var photoProblem by remember { mutableStateOf<String?>(null) }
     var converting by remember { mutableStateOf(false) }
     var localError by remember { mutableStateOf(initialError) }
+    val cutout = rememberPhotoCutout(if (mode == SaleMode.New) form.photoUri else null)
 
     val existingMode = mode == SaleMode.Existing
     FormScaffold(
@@ -365,9 +369,10 @@ fun SaleSheet(
                 if (e.any) return@FormScaffold
                 scope.launch {
                     converting = true
-                    val up = readUpload(context, form.photoUri)
+                    val chosen = cutout.effectiveUri(form.photoUri)
+                    val up = readGarmentUpload(context, chosen, form.photoUri)
                     converting = false
-                    if (up == null) photoProblem = READ_ERROR else { onSubmitNew(form, up); onClose() }
+                    if (up == null) photoProblem = READ_ERROR else { onSubmitNew(form.copy(photoUri = chosen), up); onClose() }
                 }
             }
         },
@@ -402,6 +407,7 @@ fun SaleSheet(
                     }
                 } else {
                     PhotoField(form.photoUri, null, photoProblem ?: errors.photo, { form = form.copy(photoUri = it); photoProblem = null; errors = errors.copy(photo = null) }, { photoProblem = it }, title = "Foto de la prenda")
+                    CutoutSection(cutout, form.photoUri)
                     LimitedField(form.name, { form = form.copy(name = it); if (errors.name != null) errors = errors.copy(name = null) }, "Nombre (p. ej. Vestido floral)", GarmentLimits.NAME, error = errors.name)
                     Field("Categoría") { OptionChips(WardrobeCatalog.categories, form.category, { form = form.copy(category = it) }) }
                 }

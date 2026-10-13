@@ -231,7 +231,10 @@ private fun DetailContent(
                 Modifier.padding(horizontal = EvSpace.screen).fillMaxWidth().aspectRatio(0.86f)
                     .clip(EvShapes.hero).background(c.surfaceAlt),
             ) {
-                EvImage(g.imageUrl, g.name, Modifier.fillMaxSize().sharedElementIfAvailable(SharedKey(g.id)))
+                EvImage(
+                    g.imageUrl, g.name, Modifier.fillMaxSize().sharedElementIfAvailable(SharedKey(g.id)).padding(12.dp),
+                    contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+                )
                 if (g.forSale) EvPriceTag(formatPrice(g.price), Modifier.align(Alignment.BottomEnd).padding(18.dp))
                 if (g.isWashing) {
                     Row(
