@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -41,6 +42,8 @@ import com.estilovivo.app.feature.social.socialRoutes
 import com.estilovivo.app.feature.suitcase.suitcaseRoutes
 import com.estilovivo.app.feature.tryon.tryOnRoutes
 import com.estilovivo.app.feature.wardrobe.wardrobeRoutes
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 
 private const val SLIDE_MS = 380
 
@@ -58,12 +61,24 @@ private fun AnimatedContentTransitionScope<NavBackStackEntry>.popExit(): ExitTra
 
 /** Raíz de la UI: tema, toasts, navegación y transiciones de elemento compartido. */
 @Composable
-fun EvApp(startDestination: Any = Welcome, darkTheme: Boolean) {
+fun EvApp(
+    startDestination: Any = Welcome,
+    darkTheme: Boolean,
+    /** Emite cuando la sesión caduca y no se puede renovar: se vuelve a la bienvenida. */
+    sessionExpired: Flow<Unit> = emptyFlow(),
+) {
     EvTheme(darkTheme = darkTheme) {
         val nav = rememberNavController()
         val toast = remember { EvToastState() }
         var tab by rememberSaveable { mutableStateOf(MainTab.Home) }
         val navigator = remember(nav) { EvNavigator(nav) { tab = it } }
+
+        LaunchedEffect(navigator, sessionExpired) {
+            sessionExpired.collect {
+                navigator.resetToWelcome()
+                toast.error("Tu sesión ha caducado. Vuelve a iniciar sesión.")
+            }
+        }
 
         CompositionLocalProvider(LocalEvToast provides toast, LocalNavigator provides navigator) {
             Box(Modifier.fillMaxSize().background(EvTheme.colors.bg)) {
