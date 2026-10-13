@@ -2,10 +2,14 @@ package com.estilovivo.app.feature.tryon
 
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
-import com.estilovivo.app.app.TryOn
+import androidx.navigation.toRoute
 import com.estilovivo.app.app.SharedScope
+import com.estilovivo.app.app.TryOn
 
-/** HUECO: el módulo `tryon` registra aquí sus destinos. */
+/** Destinos del módulo `tryon`: el probador virtual a pantalla completa. */
 fun NavGraphBuilder.tryOnRoutes() {
-    composable<TryOn> { SharedScope { TryonPlaceholder("Probador") } }
+    composable<TryOn> { entry ->
+        val route = entry.toRoute<TryOn>()
+        SharedScope { TryOnScreen(route.garmentId) }
+    }
 }
