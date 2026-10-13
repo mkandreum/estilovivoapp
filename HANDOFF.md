@@ -25,17 +25,27 @@ Exigencia del cliente: *"hay funcionalidades en la web que no van bien; en la ap
 | core/util `CycleStore` (ciclo, cifrado) | ✅ en master | master |
 | feature/social/shop + chat (Tienda, Favoritos, Detalle, Chat tiempo real) | ✅ en master (90 tests) | master |
 | feature/wardrobe (armario, looks, ventas, lavadora) | ✅ en master (46 tests) | master |
-| feature/social/feed (feed, historias, retos, perfil ajeno, tendencias) | ⏳ agente trabajando; **al retomar mira si `feat-social-feed` tiene commit y fusiónalo** | feat-social-feed |
-| feature/home | ⏳ ídem | feat-home |
-| feature/planner | ⏳ ídem | feat-planner |
-| feature/suitcase (+wishlist) | ⏳ ídem | feat-suitcase |
-| feature/profile (+ajustes, premium, privacidad) | ❌ pendiente (hay placeholder) | — |
+| feature/social/feed (feed, historias, retos, perfil ajeno, tendencias) | ✅ en master (74 tests) | master |
+| feature/home | ⏳ agente en curso: **código sin commit** en `wt/home` (11 ficheros) | feat-home |
+| feature/planner | ⏳ agente en curso: **código sin commit** en `wt/planner` (9 ficheros) | feat-planner |
+| feature/suitcase (+wishlist) | ⏳ agente en curso: **código sin commit** en `wt/suitcase` (5 ficheros) | feat-suitcase |
+| feature/profile (+ajustes, premium, privacidad) | ⏳ agente recién lanzado, aún sin ficheros en `wt/profile` | feat-profile |
 | feature/auth (login/registro/onboarding/deep links) | ❌ pendiente (placeholder; `Welcome` ya hecha) | — |
 | feature/tryon (probador virtual) | ❌ pendiente (placeholder) | — |
 | feature/notifications (campana, pantalla) + pulido transversal | ❌ pendiente (placeholder) | — |
 | Integración final + pruebas en emulador + APK release firmado | ❌ | — |
 
 Comprueba el estado real con: `cd android-app; git branch -a; git log --oneline --all --graph | head -30; git worktree list`. Una rama con commit propio (`git log master..feat-X`) está terminada y se integra con `git merge --no-edit feat-X`. Si un worktree tiene cambios sin commitear, el agente murió a medias: revisa `git -C ../wt/X status`, compila y haz commit tú.
+
+### Estado de las ramas a fecha de la última actualización (13/10/2026)
+- `master` incluye: diseño, datos, `CycleStore`, tienda+chat, armario, social-feed (commit `60990b9` + docs).
+- Ramas `feat-home`, `feat-planner`, `feat-suitcase`, `feat-profile`: **0 commits propios todavía**. Había agentes escribiendo en sus worktrees (`wt/home`, `wt/planner`, `wt/suitcase`, `wt/profile`). Si esos agentes ya no están activos al retomar:
+  1. `git -C ../wt/<m> status --short` → si hay ficheros, es trabajo a medias: ábrelo, revisa que no falten ficheros, `:app:compileDebugKotlin` desde el worktree (copia `local.properties` si falta), corrige y `git add -A && git commit`.
+  2. Después `git merge --no-edit feat-<m>` en `android-app` (conflicto típico: la lista de `AppModule.kt`; conserva todos los módulos).
+  3. Si un módulo está casi vacío, vuelve a hacerlo con el prompt de la sección 3.2 (los de home, planner y suitcase siguen la misma plantilla).
+- Aún no lanzados: **auth**, **tryon**, **notifications** (+ pulido transversal).
+- Prompts originales de los agentes: sección 3.2 resume las funciones; las reglas comunes están en `AGENTS.md`.
+- Los informes de los módulos ya terminados traen cosas por verificar en emulador: gestos del visor de historias (toque/mantener/arrastrar), elementos compartidos de avatar y rejilla→detalle, cámara/permisos, `ModalBottomSheet` con teclado, entrega real por socket (socket.io 2.1.2 con OkHttp 5: compila, **sin probar en runtime**).
 
 ## 3. Pendiente por hacer (en este orden)
 ### 3.1 Integrar ramas terminadas
