@@ -87,7 +87,7 @@ fun EvPillButton(
 ) {
     val c = EvTheme.colors
     val (bg, fg, border) = when (style) {
-        EvButtonStyle.Primary -> Triple(c.ink, c.onInk, Color.Transparent)
+        EvButtonStyle.Primary -> Triple(c.brand, c.onBrand, Color.Transparent)
         EvButtonStyle.Secondary -> Triple(c.surface, c.ink, c.outline)
         EvButtonStyle.Ghost -> Triple(Color.Transparent, c.ink, Color.Transparent)
         EvButtonStyle.Danger -> Triple(c.danger, Color.White, Color.Transparent)
@@ -123,7 +123,7 @@ fun EvPillButton(
 
 /** Tres puntos que saltan en onda. */
 @Composable
-fun EvLoadingDots(color: Color = EvTheme.colors.ink, modifier: Modifier = Modifier) {
+fun EvLoadingDots(color: Color = EvTheme.colors.brand, modifier: Modifier = Modifier) {
     val t = rememberInfiniteTransition(label = "dots")
     Row(modifier, horizontalArrangement = Arrangement.spacedBy(5.dp), verticalAlignment = Alignment.CenterVertically) {
         repeat(3) { i ->

@@ -19,6 +19,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.estilovivo.app.core.data.session.AppPrefs
 import com.estilovivo.app.core.data.session.AppSettings
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.runBlocking
 import org.koin.core.context.GlobalContext
 
 /** Formas del sistema: esquinas muy redondeadas, botones y chips en píldora. */
@@ -77,6 +78,13 @@ private fun EvColors.animated(): EvColors {
         danger = animateColorAsState(danger, spec, label = "evDanger").value,
         scrim = animateColorAsState(scrim, spec, label = "evScrim").value,
         isDark = isDark,
+        brand = animateColorAsState(brand, spec, label = "evBrand").value,
+        onBrand = animateColorAsState(onBrand, spec, label = "evOnBrand").value,
+        brandSoft = animateColorAsState(brandSoft, spec, label = "evBrandSoft").value,
+        brandInk = animateColorAsState(brandInk, spec, label = "evBrandInk").value,
+        brandOnInk = animateColorAsState(brandOnInk, spec, label = "evBrandOnInk").value,
+        navBrand = animateColorAsState(navBrand, spec, label = "evNavBrand").value,
+        onNavBrand = animateColorAsState(onNavBrand, spec, label = "evOnNavBrand").value,
     )
 }
 
@@ -110,9 +118,14 @@ fun EvTheme(
 ) {
     // Ajustes de accesibilidad en vivo (alto contraste y háptica). Sin Koin (previews/tests) se usan los valores por defecto.
     val prefsFlow = remember { GlobalContext.getOrNull()?.getOrNull<AppPrefs>()?.settings ?: flowOf(AppSettings()) }
-    val settings by prefsFlow.collectAsStateWithLifecycle(AppSettings())
-    val base = if (darkTheme) DarkEvColors else LightEvColors
-    // El cambio claro/oscuro/contraste se funde en vez de saltar.
+    // Lectura puntual síncrona (DataStore ya está en caché tras MainActivity): el tema pinta bien desde el primer frame, sin red.
+    val initial = remember {
+        GlobalContext.getOrNull()?.getOrNull<AppPrefs>()?.let { runCatching { runBlocking { it.current() } }.getOrNull() } ?: AppSettings()
+    }
+    val settings by prefsFlow.collectAsStateWithLifecycle(initial)
+    val choice = remember(settings.themePreset, settings.customColor) { BrandChoice(settings.themePreset, settings.customColor) }
+    val base = remember(darkTheme, choice) { (if (darkTheme) DarkEvColors else LightEvColors).withBrand(choice) }
+    // El cambio claro/oscuro/contraste/color de marca se funde en vez de saltar.
     val colors = (if (settings.highContrast) base.withHighContrast() else base).animated()
     CompositionLocalProvider(LocalEvColors provides colors, LocalHapticsEnabled provides settings.haptics) {
         MaterialTheme(

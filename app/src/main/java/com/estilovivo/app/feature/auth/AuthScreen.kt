@@ -272,7 +272,7 @@ private fun LoginRegisterForm(state: AuthUiState, vm: AuthViewModel) {
             CheckRow(remember, "Recordarme", { remember = it })
             if (!register) {
                 Text(
-                    "¿Olvidaste tu contraseña?", style = EvType.label, color = c.ink,
+                    "¿Olvidaste tu contraseña?", style = EvType.label, color = c.brandInk,
                     textDecoration = TextDecoration.Underline,
                     modifier = Modifier.evClickable(pressedScale = 0.95f) { vm.goForgot() }.padding(8.dp),
                 )

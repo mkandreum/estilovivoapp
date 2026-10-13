@@ -119,8 +119,8 @@ internal fun EvSwitch(
 ) {
     val c = EvTheme.colors
     val haptics = rememberEvHaptics()
-    val track by animateColorAsState(if (checked) c.ink else c.outline, tween(220), label = "swTrack")
-    val thumb by animateColorAsState(if (checked) c.onInk else c.surface, tween(220), label = "swThumb")
+    val track by animateColorAsState(if (checked) c.brand else c.outline, tween(220), label = "swTrack")
+    val thumb by animateColorAsState(if (checked) c.onBrand else c.surface, tween(220), label = "swThumb")
     val x by animateDpAsState(if (checked) 22.dp else 0.dp, EvMotion.bouncy(), label = "swX")
     Box(
         modifier

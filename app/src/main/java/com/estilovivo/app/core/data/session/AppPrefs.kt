@@ -37,7 +37,23 @@ data class AppSettings(
     val fontScale: Float = 1f,
     val highContrast: Boolean = false,
     val haptics: Boolean = true,
+    /** Tema de color de marca ("classic" o id de preset de la web). Desconocido → clásico al pintar. */
+    val themePreset: String = ThemeCodec.CLASSIC,
+    /** Color propio `#RRGGBB` (gana al preset) o null. */
+    val customColor: String? = null,
 )
+
+/** Normalización pura (sin Android) de lo que se guarda del tema de color. */
+object ThemeCodec {
+    const val CLASSIC = "classic"
+    private val HEX = Regex("^#?([0-9a-fA-F]{6})$")
+
+    fun preset(raw: String?): String = raw?.trim()?.lowercase()?.takeIf { it.isNotEmpty() && it.length <= 24 } ?: CLASSIC
+
+    /** `#RRGGBB` en mayúsculas o null si no es un hex válido (vacío incluido). */
+    fun customColor(raw: String?): String? =
+        raw?.trim()?.let { HEX.matchEntire(it)?.groupValues?.get(1)?.uppercase()?.let { h -> "#$h" } }
+}
 
 private val Context.appPrefsStore: DataStore<Preferences> by preferencesDataStore(
     name = "app_prefs",
@@ -55,6 +71,8 @@ class AppPrefs(context: Context) {
         val fontScale = floatPreferencesKey("font_scale")
         val highContrast = booleanPreferencesKey("high_contrast")
         val haptics = booleanPreferencesKey("haptics")
+        val themePreset = stringPreferencesKey("theme_preset")
+        val customColor = stringPreferencesKey("custom_color")
     }
 
     val settings: Flow<AppSettings> = store.data
@@ -67,6 +85,8 @@ class AppPrefs(context: Context) {
                 fontScale = (p[Keys.fontScale] ?: 1f).coerceIn(0.85f, 1.5f),
                 highContrast = p[Keys.highContrast] ?: false,
                 haptics = p[Keys.haptics] ?: true,
+                themePreset = ThemeCodec.preset(p[Keys.themePreset]),
+                customColor = ThemeCodec.customColor(p[Keys.customColor]),
             )
         }
         .distinctUntilChanged()
@@ -87,4 +107,13 @@ class AppPrefs(context: Context) {
     suspend fun setFontScale(value: Float) { store.edit { it[Keys.fontScale] = value.coerceIn(0.85f, 1.5f) } }
     suspend fun setHighContrast(value: Boolean) { store.edit { it[Keys.highContrast] = value } }
     suspend fun setHaptics(value: Boolean) { store.edit { it[Keys.haptics] = value } }
+
+    /** Guarda el tema de color (valores del servidor o elegidos aquí). `null`/inválido → clásico / sin color propio. */
+    suspend fun setBrandTheme(preset: String?, customColor: String?) {
+        store.edit {
+            it[Keys.themePreset] = ThemeCodec.preset(preset)
+            val hex = ThemeCodec.customColor(customColor)
+            if (hex != null) it[Keys.customColor] = hex else it.remove(Keys.customColor)
+        }
+    }
 }

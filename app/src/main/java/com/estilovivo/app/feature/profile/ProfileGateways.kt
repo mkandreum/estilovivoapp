@@ -15,6 +15,9 @@ interface LocalSettings {
     suspend fun setFontScale(value: Float)
     suspend fun setHighContrast(value: Boolean)
     suspend fun setHaptics(value: Boolean)
+
+    /** Tema de color de marca (preset + color propio `#RRGGBB`). */
+    suspend fun setBrandTheme(preset: String?, customColor: String?) {}
 }
 
 internal class AppPrefsLocalSettings(private val prefs: AppPrefs) : LocalSettings {
@@ -23,6 +26,7 @@ internal class AppPrefsLocalSettings(private val prefs: AppPrefs) : LocalSetting
     override suspend fun setFontScale(value: Float) = prefs.setFontScale(value)
     override suspend fun setHighContrast(value: Boolean) = prefs.setHighContrast(value)
     override suspend fun setHaptics(value: Boolean) = prefs.setHaptics(value)
+    override suspend fun setBrandTheme(preset: String?, customColor: String?) = prefs.setBrandTheme(preset, customColor)
 }
 
 /** Periodo del ciclo (dato de salud, sólo en el dispositivo). Abstracción de [CycleStore]. */

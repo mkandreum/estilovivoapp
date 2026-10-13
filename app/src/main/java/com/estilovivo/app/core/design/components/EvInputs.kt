@@ -61,9 +61,9 @@ fun EvChip(
     leading: ImageVector? = null,
 ) {
     val c = EvTheme.colors
-    val bg by animateColorAsState(if (selected) c.ink else c.surface, tween(220), label = "chipBg")
-    val fg by animateColorAsState(if (selected) c.onInk else c.inkSoft, tween(220), label = "chipFg")
-    val borderColor by animateColorAsState(if (selected) c.ink else c.outline, tween(220), label = "chipBorder")
+    val bg by animateColorAsState(if (selected) c.brand else c.surface, tween(220), label = "chipBg")
+    val fg by animateColorAsState(if (selected) c.onBrand else c.inkSoft, tween(220), label = "chipFg")
+    val borderColor by animateColorAsState(if (selected) c.brand else c.outline, tween(220), label = "chipBorder")
     Row(
         modifier
             .heightIn(min = 40.dp)
@@ -246,8 +246,8 @@ fun <T> EvSegmented(
     ) {
         options.forEach { option ->
             val isSel = option == selected
-            val bg by animateColorAsState(if (isSel) c.ink else androidx.compose.ui.graphics.Color.Transparent, tween(220), label = "segBg")
-            val fg by animateColorAsState(if (isSel) c.onInk else c.inkSoft, tween(220), label = "segFg")
+            val bg by animateColorAsState(if (isSel) c.brand else androidx.compose.ui.graphics.Color.Transparent, tween(220), label = "segBg")
+            val fg by animateColorAsState(if (isSel) c.onBrand else c.inkSoft, tween(220), label = "segFg")
             Box(
                 Modifier.weight(1f).height(38.dp).clip(CircleShape).background(bg)
                     .evClickable(pressedScale = 0.95f) { onSelect(option) }.padding(horizontal = 14.dp),

@@ -91,8 +91,8 @@ fun EvBottomBar(
 
 @Composable
 private fun NavItem(item: EvNavItem, selected: Boolean, onClick: () -> Unit) {
-    val bg by animateColorAsState(if (selected) Color.White else Color.Transparent, tween(260), label = "navBg")
-    val fg by animateColorAsState(if (selected) Color(0xFF0B0B0F) else Color.White.copy(alpha = 0.62f), tween(260), label = "navFg")
+    val bg by animateColorAsState(if (selected) EvTheme.colors.navBrand else Color.Transparent, tween(260), label = "navBg")
+    val fg by animateColorAsState(if (selected) EvTheme.colors.onNavBrand else Color.White.copy(alpha = 0.62f), tween(260), label = "navFg")
     val bounce = remember { Animatable(1f) }
     LaunchedEffect(selected) {
         if (selected) { bounce.snapTo(0.6f); bounce.animateTo(1f, EvMotion.bouncy()) }

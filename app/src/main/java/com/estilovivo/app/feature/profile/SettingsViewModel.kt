@@ -9,7 +9,10 @@ import com.estilovivo.app.core.data.model.User
 import com.estilovivo.app.core.data.repo.AuthRepository
 import com.estilovivo.app.core.data.repo.SocialRepository
 import com.estilovivo.app.core.data.session.AppSettings
+import com.estilovivo.app.core.data.session.ThemeCodec
 import com.estilovivo.app.core.data.session.ThemeMode
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import com.estilovivo.app.core.util.CyclePeriod
 import com.estilovivo.app.feature.profile.ProfileRules.EmailKey
 import com.estilovivo.app.feature.profile.ProfileRules.EmailPrefs
@@ -214,6 +217,39 @@ class SettingsViewModel(
     fun setFontScale(value: Float) = localChange { local.setFontScale(ProfileRules.clampFontScale(value)) }
     fun setHighContrast(value: Boolean) = localChange { local.setHighContrast(value) }
     fun setHaptics(value: Boolean) = localChange { local.setHaptics(value) }
+
+    private val themeLock = Mutex()
+
+    /**
+     * Cambia el tema de color: se pinta al instante (guardado local) y se sincroniza con el servidor.
+     * Si falla vuelve al valor anterior y avisa. [customColor] null = sin color propio (usa el preset).
+     */
+    fun setBrandTheme(preset: String, customColor: String?) {
+        viewModelScope.launch {
+            themeLock.withLock {
+                val prev = state.value.local
+                val newPreset = ThemeCodec.preset(preset)
+                val newCustom = ThemeCodec.customColor(customColor)
+                if (prev.themePreset == newPreset && prev.customColor == newCustom) return@withLock
+                try {
+                    local.setBrandTheme(newPreset, newCustom)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    _events.send(ProfileEvent.Error("No se pudo guardar el tema en este dispositivo."))
+                    return@withLock
+                }
+                // "" borra el color propio en el servidor (null = no tocar)
+                when (val r = auth.updatePreferences(PreferencesUpdate(themePreset = newPreset, customColor = newCustom ?: ""))) {
+                    is ApiResult.Success -> Unit
+                    is ApiResult.Failure -> {
+                        runCatching { local.setBrandTheme(prev.themePreset, prev.customColor) } // rollback
+                        _events.send(ProfileEvent.Error(r.error.message))
+                    }
+                }
+            }
+        }
+    }
 
     private fun localChange(block: suspend () -> Unit) {
         viewModelScope.launch {

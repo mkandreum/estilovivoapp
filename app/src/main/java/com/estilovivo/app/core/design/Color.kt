@@ -35,6 +35,19 @@ data class EvColors(
     /** Oscurecido tras modales. */
     val scrim: Color,
     val isDark: Boolean,
+    /** Color de marca (botón primario, selección, progreso, interruptores). Clásico = `ink`. */
+    val brand: Color = ink,
+    /** Texto/icono sobre `brand` (blanco o negro automático, contraste ≥ 4,5:1). */
+    val onBrand: Color = onInk,
+    /** Marca al ~12 % sobre la superficie (fondos suaves, vista previa). */
+    val brandSoft: Color = ink.copy(alpha = 0.12f),
+    /** Marca legible como texto sobre `surface` (enlaces, ≥ 4,5:1). */
+    val brandInk: Color = ink,
+    /** Marca sobre paneles de fondo `ink` (barra de XP del panel oscuro). */
+    val brandOnInk: Color = onInk,
+    /** Cápsula activa de la barra inferior (la barra es siempre oscura). */
+    val navBrand: Color = Color.White,
+    val onNavBrand: Color = Color(0xFF0B0B0F),
 )
 
 val LightEvColors = EvColors(

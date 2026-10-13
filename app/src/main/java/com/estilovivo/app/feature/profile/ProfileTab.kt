@@ -167,7 +167,7 @@ private fun LevelAvatar(avatar: String?, name: String, level: LevelProgress) {
             val stroke = 6.dp.toPx()
             val arcSize = Size(size.width - stroke, size.height - stroke)
             drawArc(c.outline, 0f, 360f, false, Offset(stroke / 2, stroke / 2), arcSize, style = Stroke(stroke))
-            drawArc(c.ink, -90f, 360f * sweep.value, false, Offset(stroke / 2, stroke / 2), arcSize, style = Stroke(stroke, cap = StrokeCap.Round))
+            drawArc(c.brand, -90f, 360f * sweep.value, false, Offset(stroke / 2, stroke / 2), arcSize, style = Stroke(stroke, cap = StrokeCap.Round))
         }
         Box(Modifier.size(124.dp).clip(CircleShape).background(c.surface), contentAlignment = Alignment.Center) {
             if (avatar != null) EvImage(avatar, "Foto de $name", Modifier.size(124.dp))

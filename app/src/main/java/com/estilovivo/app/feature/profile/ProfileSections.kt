@@ -213,7 +213,7 @@ private fun ProgressContent(ui: ProgressUi) {
                 Text("${ui.progress.experiencePoints} XP", style = EvType.title, color = c.onInk)
             }
             Box(Modifier.fillMaxWidth().height(12.dp).clip(CircleShape).background(c.onInk.copy(alpha = 0.2f))) {
-                Box(Modifier.fillMaxWidth(bar.value.coerceIn(0.02f, 1f)).height(12.dp).clip(CircleShape).background(c.onInk))
+                Box(Modifier.fillMaxWidth(bar.value.coerceIn(0.02f, 1f)).height(12.dp).clip(CircleShape).background(c.brandOnInk))
             }
             Text("${lv.current} / ${lv.needed} XP · te faltan ${lv.remaining} para el nivel ${lv.level + 1}", style = EvType.bodySmall, color = c.onInk.copy(alpha = 0.75f))
         }

@@ -79,6 +79,7 @@ internal class AuthRepositoryImpl(
         val user = mappers.user(res.user ?: missing("el usuario"))
         session.startSession(token, res.refreshToken, user)
         prefs.setRememberMe(remember)
+        prefs.setBrandTheme(user.themePreset, user.customColor)
         AuthOutcome(user, res.requiresVerification)
     }
 
@@ -107,12 +108,14 @@ internal class AuthRepositoryImpl(
             if (session.hasSession) withTimeoutOrNull(5_000) { runCatching { api.logout() } }
         } finally {
             session.clear()
+            runCatching { prefs.setBrandTheme(null, null) } // al cerrar sesión vuelve el tema clásico
         }
     }
 
     override suspend fun refreshMe(): ApiResult<User> = apiCall {
         val user = mappers.user(api.me(), previous = session.user.value)
         session.updateUser(user)
+        prefs.setBrandTheme(user.themePreset, user.customColor)
         user
     }
 
@@ -189,5 +192,6 @@ internal class AuthRepositoryImpl(
     override suspend fun deleteAccount(): ApiResult<Unit> = apiCall {
         api.deleteAccount()
         session.clear()
+        prefs.setBrandTheme(null, null)
     }
 }

@@ -241,7 +241,7 @@ internal fun CooldownRing(seconds: Int, total: Int = RESEND_COOLDOWN_SECONDS, mo
             val inset = stroke.width / 2
             val sz = Size(size.width - stroke.width, size.height - stroke.width)
             drawArc(c.outline, 0f, 360f, false, Offset(inset, inset), sz, style = stroke)
-            drawArc(c.ink, -90f, 360f * frac, false, Offset(inset, inset), sz, style = stroke)
+            drawArc(c.brand, -90f, 360f * frac, false, Offset(inset, inset), sz, style = stroke)
         }
         AnimatedContent(
             targetState = seconds,
